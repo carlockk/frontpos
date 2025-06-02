@@ -14,7 +14,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ModalEditarProducto from '../components/ModalEditarProducto';
 import BuscadorProducto from '../components/BuscadorProducto';
 
-const BASE_URL = 'http://localhost:5000';
+// ✅ Cambiar BASE_URL usando .env (VITE_BACKEND_URL)
+const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 
 export default function Productos() {
   const theme = useTheme();
@@ -25,14 +26,12 @@ export default function Productos() {
   const [openConfirm, setOpenConfirm] = useState(false);
   const [openEditar, setOpenEditar] = useState(false);
 
-  // Filtros
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [precioMin, setPrecioMin] = useState('');
   const [precioMax, setPrecioMax] = useState('');
   const [stockMin, setStockMin] = useState('');
 
-  // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const productosPorPagina = 10;
 
@@ -121,9 +120,7 @@ export default function Productos() {
                 <TableCell>${prod.precio.toLocaleString()}</TableCell>
                 <TableCell>{prod.descripcion || '—'}</TableCell>
                 <TableCell>{prod.categoria?.nombre || '—'}</TableCell>
-                <TableCell>
-  {typeof prod.stock === 'number' && prod.stock >= 0 ? prod.stock : '—'}
-</TableCell>
+                <TableCell>{typeof prod.stock === 'number' && prod.stock >= 0 ? prod.stock : '—'}</TableCell>
                 <TableCell>
                   {prod.imagen_url ? (
                     <Box
@@ -145,24 +142,16 @@ export default function Productos() {
                   ) : 'Sin imagen'}
                 </TableCell>
                 <TableCell align="center">
-                  <IconButton
-                    color="primary"
-                    size="small"
-                    onClick={() => {
-                      setProductoSeleccionado({ ...prod });
-                      setOpenEditar(true);
-                    }}
-                  >
+                  <IconButton color="primary" size="small" onClick={() => {
+                    setProductoSeleccionado({ ...prod });
+                    setOpenEditar(true);
+                  }}>
                     <EditIcon />
                   </IconButton>
-                  <IconButton
-                    color="error"
-                    size="small"
-                    onClick={() => {
-                      setProductoSeleccionado(prod);
-                      setOpenConfirm(true);
-                    }}
-                  >
+                  <IconButton color="error" size="small" onClick={() => {
+                    setProductoSeleccionado(prod);
+                    setOpenConfirm(true);
+                  }}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -170,7 +159,7 @@ export default function Productos() {
             ))}
             {productosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   No hay productos coincidentes.
                 </TableCell>
               </TableRow>
@@ -190,7 +179,6 @@ export default function Productos() {
         </Stack>
       )}
 
-      {/* Modal Confirmación Eliminar */}
       <Dialog
         open={openConfirm}
         onClose={() => {
@@ -207,7 +195,6 @@ export default function Productos() {
         </DialogActions>
       </Dialog>
 
-      {/* Modal Editar */}
       <ModalEditarProducto
         open={openEditar}
         onClose={() => {
