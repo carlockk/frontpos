@@ -1,4 +1,39 @@
-// ...importaciones sin cambios previos...
+// Importaciones
+import {
+  Drawer,
+  Box,
+  Typography,
+  Divider,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Button,
+  Collapse,
+  useMediaQuery,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+
+import { useTheme } from '@mui/material/styles';
+import { Link, useLocation } from 'react-router-dom';
+import LogoutIcon from '@mui/icons-material/LogoutOutlined';
+import { useAuth } from '../context/AuthContext';
+import { useCaja } from '../context/CajaContext';
+import { useThemeMode } from '../context/ThemeContext';
+import { useEffect, useState } from 'react';
+import logo from '../possail.png';
+
+// Icons
+import DashboardIcon from '@mui/icons-material/DashboardOutlined';
+import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
+import PointOfSaleIcon from '@mui/icons-material/PointOfSaleOutlined';
+import HistoryIcon from '@mui/icons-material/HistoryOutlined';
+import StoreIcon from '@mui/icons-material/StoreOutlined';
+import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import { Brightness4, Brightness7 } from '@mui/icons-material';
 
 const drawerWidth = 290;
 
@@ -12,16 +47,14 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
 
   const [openMenus, setOpenMenus] = useState({
     productos: false,
+    categorias: false, // ✅ nuevo
     caja: false,
     usuarios: false,
-    categorias: false, // ✅ NUEVO
   });
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarMenus');
-    if (saved) {
-      setOpenMenus(JSON.parse(saved));
-    }
+    if (saved) setOpenMenus(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
@@ -29,9 +62,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   }, [openMenus]);
 
   useEffect(() => {
-    if (isMobile && toggleDrawer) {
-      toggleDrawer();
-    }
+    if (isMobile && toggleDrawer) toggleDrawer();
   }, [location]);
 
   const toggleMenu = (key) => {
@@ -55,9 +86,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
           <img src={logo} alt="POS System" style={{ width: '70%', height: '40px', maxWidth: 200 }} />
         </Box>
-        <Typography sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          Punto de venta
-        </Typography>
+        <Typography sx={{ textAlign: 'center' }}>Punto de venta</Typography>
         {usuario && (
           <Typography variant="body2" sx={{ mt: 1, color: '#9ca3af', textAlign: 'center' }}>
             👤 {usuario.email} ({usuario.rol})
@@ -125,7 +154,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </ListItemButton>
         </ListItem>
 
-        {/* Tickets Abiertos */}
+        {/* Tickets abiertos */}
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/tickets-abiertos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
             <Box sx={{ mr: 2 }}><StoreIcon /></Box>
@@ -133,7 +162,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </ListItemButton>
         </ListItem>
 
-        {/* Solo admin */}
+        {/* Admin only */}
         {usuario?.rol === 'admin' && (
           <>
             {/* Caja */}
@@ -173,11 +202,9 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         )}
       </List>
 
-      {/* Cambiar tema + Cerrar sesión */}
+      {/* Tema + Logout */}
       <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="body2" sx={{ color: '#9ca3af' }}>
-          Tema
-        </Typography>
+        <Typography variant="body2" sx={{ color: '#9ca3af' }}>Tema</Typography>
         <Tooltip title="Cambiar tema">
           <IconButton onClick={toggleTema} color="inherit" sx={{ mr: 2.5 }}>
             {modoOscuro ? <Brightness7 /> : <Brightness4 />}
