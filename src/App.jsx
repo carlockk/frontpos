@@ -78,8 +78,6 @@ export default function App() {
             <Route path="/ticket" element={<Ticket />} />
             <Route path="/ticket-caja" element={<TicketCaja />} />
             <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} /> {/* ✅ NUEVO */}
-            <Route path="/categorias" element={<VerCategorias />} />
-
           </Routes>
         </Box>
       </Box>

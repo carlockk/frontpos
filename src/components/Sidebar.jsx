@@ -1,4 +1,3 @@
-// Importaciones
 import {
   Drawer,
   Box,
@@ -19,10 +18,8 @@ import { useTheme } from '@mui/material/styles';
 import { Link, useLocation } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
-import { useCaja } from '../context/CajaContext';
-import { useThemeMode } from '../context/ThemeContext';
 import { useEffect, useState } from 'react';
-import logo from '../possail.png';
+import { useCaja } from '../context/CajaContext'; // ✅ Nuevo contexto
 
 // Icons
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
@@ -34,6 +31,8 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
+import { useThemeMode } from '../context/ThemeContext';
+import logo from '../possail.png';
 
 const drawerWidth = 290;
 
@@ -43,18 +42,19 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { modoOscuro, toggleTema } = useThemeMode();
-  const { cajaAbierta } = useCaja();
+  const { cajaAbierta } = useCaja(); // ✅ Estado dinámico de caja
 
   const [openMenus, setOpenMenus] = useState({
     productos: false,
-    categorias: false, // ✅ nuevo
     caja: false,
     usuarios: false,
   });
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarMenus');
-    if (saved) setOpenMenus(JSON.parse(saved));
+    if (saved) {
+      setOpenMenus(JSON.parse(saved));
+    }
   }, []);
 
   useEffect(() => {
@@ -62,7 +62,9 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   }, [openMenus]);
 
   useEffect(() => {
-    if (isMobile && toggleDrawer) toggleDrawer();
+    if (isMobile && toggleDrawer) {
+      toggleDrawer();
+    }
   }, [location]);
 
   const toggleMenu = (key) => {
@@ -83,16 +85,18 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     >
       {/* Header */}
       <Box sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <img src={logo} alt="POS System" style={{ width: '70%', height: '40px', maxWidth: 200 }} />
-        </Box>
-        <Typography sx={{ textAlign: 'center' }}>Punto de venta</Typography>
-        {usuario && (
-          <Typography variant="body2" sx={{ mt: 1, color: '#9ca3af', textAlign: 'center' }}>
-            👤 {usuario.email} ({usuario.rol})
-          </Typography>
-        )}
-      </Box>
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <img src={logo} alt="POS System" style={{ width: '70%', height: '40px', maxWidth: 200 }} />
+  </Box>
+  <Typography sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    Punto de venta
+  </Typography>
+  {usuario && (
+    <Typography variant="body2" sx={{ mt: 1, color: '#9ca3af', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      👤 {usuario.email} ({usuario.rol})
+    </Typography>
+  )}
+</Box>
 
       <Divider sx={{ borderColor: '#374151' }} />
 
@@ -118,20 +122,6 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             <ListItemButton component={Link} to="/crear" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
               <ListItemText primary="Crear Producto" />
             </ListItemButton>
-          </List>
-        </Collapse>
-
-        {/* Categorías */}
-        <ListItemButton onClick={() => toggleMenu('categorias')} sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-          <Box sx={{ mr: 2 }}><InventoryIcon /></Box>
-          <ListItemText primary="Categorías" />
-          {openMenus.categorias ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={openMenus.categorias} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItemButton component={Link} to="/categorias" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-              <ListItemText primary="Ver Categorías" />
-            </ListItemButton>
             <ListItemButton component={Link} to="/crear-categoria" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
               <ListItemText primary="Crear Categoría" />
             </ListItemButton>
@@ -154,15 +144,16 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </ListItemButton>
         </ListItem>
 
-        {/* Tickets abiertos */}
+ {/* tickets abiertos */}
         <ListItem disablePadding>
-          <ListItemButton component={Link} to="/tickets-abiertos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-            <Box sx={{ mr: 2 }}><StoreIcon /></Box>
-            <ListItemText primary="Tickets Abiertos" />
-          </ListItemButton>
-        </ListItem>
+  <ListItemButton component={Link} to="/tickets-abiertos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+    <Box sx={{ mr: 2 }}><StoreIcon /></Box>
+    <ListItemText primary="Tickets Abiertos" />
+  </ListItemButton>
+</ListItem>
 
-        {/* Admin only */}
+
+        {/* Solo admin */}
         {usuario?.rol === 'admin' && (
           <>
             {/* Caja */}
@@ -202,9 +193,11 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         )}
       </List>
 
-      {/* Tema + Logout */}
+      {/* Cambiar tema + Cerrar sesión */}
       <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="body2" sx={{ color: '#9ca3af' }}>Tema</Typography>
+        <Typography variant="body2" sx={{ color: '#9ca3af' }}>
+          Tema
+        </Typography>
         <Tooltip title="Cambiar tema">
           <IconButton onClick={toggleTema} color="inherit" sx={{ mr: 2.5 }}>
             {modoOscuro ? <Brightness7 /> : <Brightness4 />}
@@ -223,7 +216,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             sx={{
               color: '#f87171',
               borderColor: '#f87171',
-              width: '90%',
+              width: '90%;', // Aquí le quito 10px de ancho
               '&:hover': {
                 backgroundColor: '#7f1d1d',
                 color: '#fff',

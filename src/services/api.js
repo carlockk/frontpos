@@ -62,8 +62,6 @@ export const obtenerHistorialCaja = () => API.get('/caja/historial');
 // ─────────────────────────────────────────────
 export const obtenerCategorias = () => API.get('/categorias');
 export const crearCategoria = (data) => API.post('/categorias', data);
-export const editarCategoria = (id, data) => API.put(`/categorias/${id}`, data);
-export const eliminarCategoria = (id) => API.delete(`/categorias/${id}`);
 
 // ─────────────────────────────────────────────
 // 🧾 Tickets Abiertos
