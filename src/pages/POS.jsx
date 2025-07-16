@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Card, CardContent, Typography, CardMedia,
   Button, Box, useMediaQuery, Tooltip, Stack, IconButton
@@ -14,6 +14,7 @@ import BuscadorProducto from '../components/BuscadorProducto';
 import ModalCrearProducto from '../components/ModalCrearProducto';
 import ShoppingCartIcon from '@mui/icons-material/PointOfSale';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import CloseIcon from '@mui/icons-material/Close';
 
 const BASE_URL = 'http://localhost:5000';
 
@@ -22,9 +23,12 @@ export default function POS() {
   const [categorias, setCategorias] = useState([]);
   const [openCarrito, setOpenCarrito] = useState(false);
   const [openCrear, setOpenCrear] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+
+  const drawerRef = useRef(null);
 
   const { agregarProducto } = useCarrito();
   const theme = useTheme();
@@ -66,32 +70,29 @@ export default function POS() {
     setOpenCarrito(true);
   };
 
-const productosFiltrados = (() => {
-  const nombreLower = busqueda.toLowerCase();
+  const handleOutsideClick = (e) => {
+    if (drawerRef.current && !drawerRef.current.contains(e.target)) {
+      setDrawerOpen(false);
+    }
+  };
 
-  const ordenCategoriaMap = categorias.reduce((acc, cat, index) => {
-    acc[cat._id] = index;
-    return acc;
-  }, {});
+  useEffect(() => {
+    if (drawerOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    } else {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [drawerOpen]);
 
-  return productos
-    .filter((prod) => {
-      const nombreOk = prod.nombre.toLowerCase().includes(nombreLower);
-      const categoriaOk = filtroCategoria
-        ? prod.categoria?._id === filtroCategoria
-        : true;
-      return nombreOk && categoriaOk;
-    })
-    .sort((a, b) => {
-      const ordenA = ordenCategoriaMap[a.categoria?._id] ?? Infinity;
-      const ordenB = ordenCategoriaMap[b.categoria?._id] ?? Infinity;
-      return ordenA - ordenB;
-    });
-})();
-
+  const productosFiltrados = productos.filter((prod) => {
+    const nombreOk = prod.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const categoriaOk = filtroCategoria ? prod.categoria?._id === filtroCategoria : true;
+    return nombreOk && categoriaOk;
+  });
 
   return (
-    <Box sx={{ mt: 2, px: 2 }}>
+    <Box sx={{ mt: 2, px: 2, position: 'relative' }}>
       {/* Encabezado */}
       <Box
         sx={{
@@ -128,18 +129,65 @@ const productosFiltrados = (() => {
         </Stack>
       </Box>
 
-      {/* Lista de categorías arrastrables */}
-      <Box sx={{ mb: 3 }}>
+      {/* Botón lateral para abrir el drawer */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: '50%',
+          right: drawerOpen ? 240 : 0,
+          transform: 'translateY(-50%)',
+          zIndex: 1300,
+        }}
+      >
+        <Button
+          onClick={() => setDrawerOpen(!drawerOpen)}
+          sx={{
+            borderRadius: '4px 0 0 4px',
+            py: 1,
+            px: 1.5,
+            fontSize: '0.75rem',
+            backgroundColor: theme.palette.primary.main,
+            color: 'white',
+            boxShadow: 3,
+            '&:hover': { backgroundColor: theme.palette.primary.dark },
+          }}
+        >
+          Categorías
+        </Button>
+      </Box>
+
+      {/* Drawer lateral */}
+      <Box
+        ref={drawerRef}
+        sx={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: 240,
+          height: '100vh',
+          backgroundColor: 'white',
+          borderLeft: '1px solid #ddd',
+          boxShadow: 4,
+          transform: drawerOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.3s ease-in-out',
+          zIndex: 1200,
+          p: 2,
+          overflowY: 'auto',
+        }}
+      >
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography variant="subtitle2" fontWeight={700}>
+            Ordenar Categorías
+          </Typography>
+          <IconButton size="small" onClick={() => setDrawerOpen(false)}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="categorias" direction="horizontal">
+          <Droppable droppableId="categoriasDrawer" direction="vertical">
             {(provided) => (
-              <Stack
-                direction="row"
-                spacing={1}
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                sx={{ flexWrap: 'wrap' }}
-              >
+              <Box ref={provided.innerRef} {...provided.droppableProps}>
                 {categorias.map((cat, index) => (
                   <Draggable key={cat._id} draggableId={cat._id} index={index}>
                     {(provided) => (
@@ -149,27 +197,30 @@ const productosFiltrados = (() => {
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          backgroundColor: filtroCategoria === cat._id ? 'primary.main' : 'grey.200',
+                          justifyContent: 'space-between',
+                          mb: 1,
+                          backgroundColor: filtroCategoria === cat._id ? 'primary.main' : 'grey.100',
                           color: filtroCategoria === cat._id ? 'white' : 'black',
-                          px: 2,
-                          py: 1,
-                          borderRadius: 2,
+                          borderRadius: 1,
+                          px: 1.2,
+                          py: 0.6,
+                          fontSize: '0.75rem',
                           cursor: 'pointer',
                         }}
                         onClick={() => setFiltroCategoria(cat._id)}
                       >
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                          {cat.nombre}
+                        </Typography>
                         <IconButton {...provided.dragHandleProps} size="small">
                           <DragIndicatorIcon fontSize="small" />
                         </IconButton>
-                        <Typography variant="body2" fontWeight={500}>
-                          {cat.nombre}
-                        </Typography>
                       </Box>
                     )}
                   </Draggable>
                 ))}
                 {provided.placeholder}
-              </Stack>
+              </Box>
             )}
           </Droppable>
         </DragDropContext>
@@ -313,9 +364,7 @@ const productosFiltrados = (() => {
       <ModalCrearProducto
         open={openCrear}
         onClose={() => setOpenCrear(false)}
-        onCreado={() => {
-          cargarProductos();
-        }}
+        onCreado={() => window.location.reload()}
       />
     </Box>
   );
