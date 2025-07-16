@@ -66,11 +66,29 @@ export default function POS() {
     setOpenCarrito(true);
   };
 
-  const productosFiltrados = productos.filter((prod) => {
-    const nombreOk = prod.nombre.toLowerCase().includes(busqueda.toLowerCase());
-    const categoriaOk = filtroCategoria ? prod.categoria?._id === filtroCategoria : true;
-    return nombreOk && categoriaOk;
-  });
+const productosFiltrados = (() => {
+  const nombreLower = busqueda.toLowerCase();
+
+  const ordenCategoriaMap = categorias.reduce((acc, cat, index) => {
+    acc[cat._id] = index;
+    return acc;
+  }, {});
+
+  return productos
+    .filter((prod) => {
+      const nombreOk = prod.nombre.toLowerCase().includes(nombreLower);
+      const categoriaOk = filtroCategoria
+        ? prod.categoria?._id === filtroCategoria
+        : true;
+      return nombreOk && categoriaOk;
+    })
+    .sort((a, b) => {
+      const ordenA = ordenCategoriaMap[a.categoria?._id] ?? Infinity;
+      const ordenB = ordenCategoriaMap[b.categoria?._id] ?? Infinity;
+      return ordenA - ordenB;
+    });
+})();
+
 
   return (
     <Box sx={{ mt: 2, px: 2 }}>
