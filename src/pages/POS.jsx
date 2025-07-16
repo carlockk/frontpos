@@ -98,17 +98,21 @@ export default function POS() {
 
           return (
             <Box
-              key={prod._id}
-              sx={{
-                width: 160,
-                minWidth: 160,
-                maxWidth: 160,
-                height: 280,
-                display: 'flex',
-                justifyContent: 'center',
-                m: 1
-              }}
-            >
+  key={prod._id}
+  sx={{
+    width: 160,
+    minWidth: 160,
+    maxWidth: 160,
+    height: 280,
+    display: 'flex',
+    justifyContent: 'center',
+    mt: 1,
+    mr: 1,
+    mb: 1,
+    ml: 1
+  }}
+>
+
               <Card
                 sx={{
                   width: '100%',
