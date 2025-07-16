@@ -86,7 +86,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
       {/* Header */}
       <Box sx={{ p: 3 }}>
   <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-    <img src={logo} alt="POS System" style={{ width: '70%', height: '80px', maxWidth: 200 }} />
+    <img src={logo} alt="POS System" style={{ width: '65%', height: '80px', maxWidth: 200 }} />
   </Box>
   <Typography sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
     Punto de venta
