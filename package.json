@@ -19,6 +19,7 @@
     "dayjs": "^1.11.13",
     "flatpickr": "^4.6.13",
     "react": "^19.1.0",
+    "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^19.1.0",
     "react-flatpickr": "^4.0.10",
     "react-multi-date-picker": "^4.5.2",
