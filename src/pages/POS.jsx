@@ -97,7 +97,7 @@ export default function POS() {
       {/* Rejilla de productos */}
       <Grid container spacing={3} justifyContent={isMobile ? 'center' : 'flex-start'}>
         {(cargando ? Array.from(new Array(6)) : productosFiltrados).map((prod, index) => (
-          <Grid item key={prod?._id || index} xs={12} sm={6} md={4} lg={2.4}>
+          <Grid item key={prod?._id || index} xs={6} sm={4} md={3} lg={2}>
             <Card
               sx={{
                 height: '100%',
