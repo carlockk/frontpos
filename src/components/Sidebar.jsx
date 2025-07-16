@@ -19,7 +19,7 @@ import { Link, useLocation } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
-import { useCaja } from '../context/CajaContext'; // ✅ Nuevo contexto
+import { useCaja } from '../context/CajaContext';
 
 // Icons
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
