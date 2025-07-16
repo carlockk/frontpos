@@ -91,28 +91,31 @@ export default function POS() {
         </Stack>
       </Box>
 
-      {/* Rejilla de productos adaptada */}
-      <Stack direction="row" spacing={2} flexWrap="wrap" justifyContent={isMobile ? 'center' : 'flex-start'}>
+      {/* Rejilla de productos con separación vertical */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: isMobile ? 'center' : 'flex-start',
+        }}
+      >
         {productosFiltrados.map((prod) => {
           const stock = prod.stock;
 
           return (
             <Box
-  key={prod._id}
-  sx={{
-    width: 160,
-    minWidth: 160,
-    maxWidth: 160,
-    height: 280,
-    display: 'flex',
-    justifyContent: 'center',
-    mt: 1,
-    mr: 1,
-    mb: 1,
-    ml: 1
-  }}
->
-
+              key={prod._id}
+              sx={{
+                width: 160,
+                minWidth: 160,
+                maxWidth: 160,
+                height: 280,
+                display: 'flex',
+                justifyContent: 'center',
+                mr: 2,
+                mb: 2,
+              }}
+            >
               <Card
                 sx={{
                   width: '100%',
@@ -143,7 +146,6 @@ export default function POS() {
                     sx={{
                       height: 100,
                       width: '100%',
-                      display: 'block',
                       objectFit: 'cover',
                       borderTopLeftRadius: '12px',
                       borderTopRightRadius: '12px',
@@ -220,7 +222,7 @@ export default function POS() {
             </Box>
           );
         })}
-      </Stack>
+      </Box>
 
       <CarritoDrawer open={openCarrito} onClose={() => setOpenCarrito(false)} />
 
