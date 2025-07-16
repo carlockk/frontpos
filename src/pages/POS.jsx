@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Typography, Button, Stack, Card, CardContent,
   CardMedia, useMediaQuery, IconButton, Drawer, Snackbar,
-  Tooltip
+  Tooltip, Fab
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -38,34 +38,44 @@ export default function POS() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userKey = user?.id || user?._id || 'anonimo';
 
-  // Cargar productos y categorías ordenadas
+  // Estado derivado: productos ordenados por categoría actual
+  const [productosOrdenados, setProductosOrdenados] = useState([]);
+
+  const ordenarProductosPorCategorias = (prods, cats) => {
+    const orden = cats.map(cat => cat._id);
+    const ordenados = [];
+
+    orden.forEach(catId => {
+      prods.filter(p => p.categoria?._id === catId).forEach(p => ordenados.push(p));
+    });
+
+    return ordenados;
+  };
+
   const cargarDatos = async () => {
     const [resProd, resCat] = await Promise.all([
       obtenerProductos(),
       obtenerCategorias()
     ]);
-    setProductos(resProd.data);
-
     const ordenGuardado = JSON.parse(localStorage.getItem(`ordenCategorias_${userKey}`));
+
+    let categoriasOrdenadas = resCat.data;
     if (ordenGuardado) {
-      const ordenadas = ordenGuardado
-        .map(id => resCat.data.find(c => c._id === id))
-        .filter(Boolean);
+      const ordenadas = ordenGuardado.map(id => resCat.data.find(c => c._id === id)).filter(Boolean);
       const faltantes = resCat.data.filter(c => !ordenGuardado.includes(c._id));
-      setCategorias([...ordenadas, ...faltantes]);
-    } else {
-      setCategorias(resCat.data);
+      categoriasOrdenadas = [...ordenadas, ...faltantes];
     }
+
+    setProductos(resProd.data);
+    setCategorias(categoriasOrdenadas);
+    setProductosOrdenados(ordenarProductosPorCategorias(resProd.data, categoriasOrdenadas));
   };
 
   useEffect(() => {
     cargarDatos();
-
-    // Si abre otra pestaña y cambia el orden
     window.addEventListener('storage', (e) => {
       if (e.key === `ordenCategorias_${userKey}`) cargarDatos();
     });
-
     return () => window.removeEventListener('storage', () => {});
   }, []);
 
@@ -83,6 +93,7 @@ export default function POS() {
 
     setCategorias(items);
     localStorage.setItem(`ordenCategorias_${userKey}`, JSON.stringify(items.map(c => c._id)));
+    setProductosOrdenados(ordenarProductosPorCategorias(productos, items));
     setSnackbarOpen(true);
   };
 
@@ -91,7 +102,7 @@ export default function POS() {
     cargarDatos();
   };
 
-  const productosFiltrados = productos.filter(prod => {
+  const productosFiltrados = productosOrdenados.filter(prod => {
     const coincideNombre = prod.nombre.toLowerCase().includes(busqueda.toLowerCase());
     const coincideCategoria = filtroCategoria ? prod.categoria?._id === filtroCategoria : true;
     return coincideNombre && coincideCategoria;
@@ -99,7 +110,7 @@ export default function POS() {
 
   return (
     <Box sx={{ mt: 2, px: 2 }}>
-      {/* Header */}
+      {/* Encabezado */}
       <Box sx={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -124,7 +135,6 @@ export default function POS() {
         <Stack direction="row" spacing={1}>
           <Button variant="contained" color="success" onClick={() => setOpenCrear(true)}>+ Producto</Button>
           <Button variant="outlined" onClick={() => setOpenCarrito(true)}>Ver Carrito</Button>
-          <IconButton onClick={() => setDrawerOpen(true)}><SettingsIcon /></IconButton>
         </Stack>
       </Box>
 
@@ -138,92 +148,56 @@ export default function POS() {
           const stock = prod.stock;
 
           return (
-            <Box
-              key={prod._id}
-              sx={{
-                width: 160,
-                minWidth: 160,
-                maxWidth: 160,
-                height: 280,
+            <Box key={prod._id} sx={{ width: 160, minWidth: 160, maxWidth: 160, height: 280, mr: 2, mb: 2 }}>
+              <Card sx={{
+                width: '100%',
+                height: '100%',
                 display: 'flex',
-                justifyContent: 'center',
-                mr: 2,
-                mb: 2,
-              }}
-            >
-              <Card
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  borderRadius: 2,
-                  boxShadow: 2,
-                  transition: 'transform 0.2s',
-                  backgroundColor: theme.palette.background.paper,
-                  '&:hover': {
-                    transform: 'scale(1.02)',
-                    boxShadow: 6,
-                  },
-                }}
-              >
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                borderRadius: 2,
+                boxShadow: 2,
+                transition: 'transform 0.2s',
+                '&:hover': { transform: 'scale(1.02)', boxShadow: 6 },
+              }}>
                 <Box sx={{ p: 1, pb: 0 }}>
                   <CardMedia
                     component="img"
-                    image={
-                      prod.imagen_url?.startsWith('/uploads')
-                        ? `${BASE_URL}${prod.imagen_url}`
-                        : prod.imagen_url
-                    }
+                    image={prod.imagen_url?.startsWith('/uploads') ? `${BASE_URL}${prod.imagen_url}` : prod.imagen_url}
                     alt={prod.nombre}
                     sx={{
-                      height: 100,
-                      width: '100%',
-                      objectFit: 'cover',
-                      borderTopLeftRadius: '12px',
-                      borderTopRightRadius: '12px',
+                      height: 100, width: '100%', objectFit: 'cover',
+                      borderTopLeftRadius: '12px', borderTopRightRadius: '12px',
                       backgroundColor: prod.imagen_url ? 'transparent' : '#ccc',
                     }}
                   />
                 </Box>
-
                 <CardContent sx={{ px: 1.5, py: 1 }}>
                   <Typography variant="subtitle1" fontWeight="bold" textAlign="center" fontSize="0.85rem" mb={0.5}>
                     {prod.nombre}
                   </Typography>
-
                   <Tooltip title={prod.descripcion}>
                     <Typography variant="body2" color="text.secondary"
-                      sx={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', textAlign: 'center', fontSize: '0.7rem' }}>
+                      sx={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'center', fontSize: '0.7rem' }}>
                       {prod.descripcion}
                     </Typography>
                   </Tooltip>
-
                   <Typography variant="h6" color="primary" textAlign="center" fontSize="1rem">
                     ${prod.precio.toLocaleString()}
                   </Typography>
-
                   {(typeof stock === 'number' && stock >= 0) && (
                     <Typography variant="caption" color={stock === 0 ? 'error' : 'text.secondary'}
                       sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}>
                       {stock === 0 ? 'AGOTADO' : `Stock: ${stock}`}
                     </Typography>
                   )}
-
                   <Box display="flex" justifyContent="center" mt={1}>
                     <Button
-                      variant="contained"
-                      size="small"
+                      variant="contained" size="small" disabled={stock === 0}
                       onClick={() => handleAgregar(prod)}
-                      disabled={stock === 0}
                       sx={{
-                        borderRadius: 1.5,
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                        px: 2,
-                        gap: 1
+                        borderRadius: 1.5, textTransform: 'none', fontWeight: 600,
+                        fontSize: '0.75rem', px: 2, gap: 1
                       }}
                     >
                       <AddShoppingCartIcon fontSize="small" />
@@ -237,16 +211,29 @@ export default function POS() {
         })}
       </Box>
 
-      {/* Drawer lateral derecho para orden de categorías */}
+      {/* Botón flotante derecho */}
+      <Fab
+        color="primary"
+        size="medium"
+        onClick={() => setDrawerOpen(true)}
+        sx={{
+          position: 'fixed',
+          right: 16,
+          bottom: 90,
+          zIndex: 1500,
+        }}
+      >
+        <SettingsIcon />
+      </Fab>
+
+      {/* Drawer para ordenar categorías */}
       <Drawer
         anchor="right"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         PaperProps={{ sx: { width: isMobile ? '90%' : 320, p: 2 } }}
       >
-        <Typography variant="h6" fontWeight={600} mb={2}>
-          Ordenar Categorías
-        </Typography>
+        <Typography variant="h6" fontWeight={600} mb={2}>Ordenar Categorías</Typography>
         <DragDropContext onDragEnd={handleDragEnd}>
           <Droppable droppableId="categorias-drawer">
             {(provided) => (
@@ -262,12 +249,8 @@ export default function POS() {
                           alignItems: 'center',
                           backgroundColor: filtroCategoria === cat._id ? 'primary.main' : 'grey.200',
                           color: filtroCategoria === cat._id ? 'white' : 'black',
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 1,
-                          mb: 1,
-                          cursor: 'pointer',
-                          fontSize: '0.85rem'
+                          px: 1.5, py: 0.5, borderRadius: 1, mb: 1,
+                          cursor: 'pointer', fontSize: '0.85rem'
                         }}
                         onClick={() => setFiltroCategoria(cat._id)}
                       >
