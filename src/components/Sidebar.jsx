@@ -140,7 +140,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/historial" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
             <Box sx={{ mr: 2 }}><HistoryIcon /></Box>
-            <ListItemText primary="Historial" />
+            <ListItemText primary="Historial de tickets" />
           </ListItemButton>
         </ListItem>
 
