@@ -132,7 +132,7 @@ export default function POS() {
                     component="img"
                     image={
                       prod.imagen_url?.startsWith('/uploads')
-                        ? `${BASE_URL}${prod.imagen_url}`
+                        ? ${BASE_URL}${prod.imagen_url}
                         : prod.imagen_url
                     }
                     alt={prod.nombre}
@@ -188,7 +188,7 @@ export default function POS() {
                       color={stock === 0 ? 'error' : 'text.secondary'}
                       sx={{ display: 'block', textAlign: 'center', mt: 0.5 }}
                     >
-                      {stock === 0 ? 'AGOTADO' : `Stock: ${stock}`}
+                      {stock === 0 ? 'AGOTADO' : Stock: ${stock}}
                     </Typography>
                   )}
 
