@@ -8,10 +8,12 @@ import { useTheme } from '@mui/material/styles';
 import {
   DragDropContext, Droppable, Draggable
 } from '@hello-pangea/dnd';
+import { useNavigate } from 'react-router-dom';
 
 import CarritoDrawer from '../components/CarritoDrawer';
 import { obtenerProductos, obtenerCategorias } from '../services/api';
 import { useCarrito } from '../context/CarritoContext';
+import { useCaja } from '../context/CajaContext';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ShoppingCartIcon from '@mui/icons-material/PointOfSale';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -34,6 +36,8 @@ export default function POS() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { agregarProducto } = useCarrito();
+  const { cajaAbierta, cajaVerificada } = useCaja();
+  const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userKey = user?.id || user?._id || 'anonimo';
@@ -107,6 +111,32 @@ export default function POS() {
     const coincideCategoria = filtroCategoria ? prod.categoria?._id === filtroCategoria : true;
     return coincideNombre && coincideCategoria;
   });
+
+  if (!cajaVerificada) {
+    return (
+      <Box sx={{ mt: 6, px: 2, display: 'flex', justifyContent: 'center' }}>
+        <Typography variant="h6">Verificando estado de la caja...</Typography>
+      </Box>
+    );
+  }
+
+  if (!cajaAbierta) {
+    return (
+      <Box sx={{ mt: 6, px: 2 }}>
+        <Card sx={{ maxWidth: 420, mx: 'auto', textAlign: 'center', p: 3 }}>
+          <CardContent>
+            <Typography variant="h5" gutterBottom>POS bloqueado</Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              No puedes iniciar el POS si no abres la caja.
+            </Typography>
+            <Button variant="contained" color="primary" onClick={() => navigate('/caja')}>
+              Ir a abrir caja
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mt: 2, px: 2 }}>
@@ -282,7 +312,11 @@ export default function POS() {
       </Drawer>
 
       <ModalCrearProducto open={openCrear} onClose={() => setOpenCrear(false)} onCreado={cargarDatos} />
-      <CarritoDrawer open={openCarrito} onClose={() => setOpenCarrito(false)} />
+      <CarritoDrawer
+        open={openCarrito}
+        onClose={() => setOpenCarrito(false)}
+        onVentaCompletada={cargarDatos}
+      />
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={2000}

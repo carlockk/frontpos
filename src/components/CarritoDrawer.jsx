@@ -5,10 +5,12 @@ import {
   IconButton,
   Button,
   TextField,
-  Stack
+  Stack,
+  Alert
 } from '@mui/material';
 import { Add, Remove } from '@mui/icons-material';
 import { useCarrito } from '../context/CarritoContext';
+import { useCaja } from '../context/CajaContext';
 import { registrarVenta, guardarTicket } from '../services/api'; // ✅ agregado
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
@@ -16,7 +18,7 @@ import ModalPago from './ModalPago';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
 
-export default function CarritoDrawer({ open, onClose }) {
+export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
   const { carrito, actualizarCantidad, actualizarObservacion, vaciarCarrito } = useCarrito();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -24,10 +26,17 @@ export default function CarritoDrawer({ open, onClose }) {
   const [ticketNombre, setTicketNombre] = useState(''); // ✅ nombre del ticket
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { cajaAbierta, cajaVerificada } = useCaja();
 
   const total = carrito.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
+  const cajaDisponible = cajaAbierta === true;
 
   const handleVenta = async ({ tipoPago, tipoPedido }) => {
+    if (!cajaDisponible) {
+      alert('No puedes iniciar el POS si no abres la caja.');
+      setModalOpen(false);
+      return;
+    }
     const productos_limpios = carrito.map(p => ({
       productoId: p._id,
       nombre: p.nombre,
@@ -47,6 +56,9 @@ export default function CarritoDrawer({ open, onClose }) {
 
       vaciarCarrito();
       onClose();
+      if (typeof onVentaCompletada === 'function') {
+        onVentaCompletada();
+      }
 
       navigate('/ticket', {
         state: {
@@ -61,7 +73,8 @@ export default function CarritoDrawer({ open, onClose }) {
       });
     } catch (err) {
       console.error(err);
-      alert("❌ Error al registrar la venta");
+      const mensaje = err?.response?.data?.error || 'Error al registrar la venta';
+      alert(mensaje);
     } finally {
       setLoading(false);
     }
@@ -152,16 +165,22 @@ export default function CarritoDrawer({ open, onClose }) {
               Total: <strong>${total.toFixed(0)}</strong>
             </Typography>
 
+            {cajaVerificada && !cajaDisponible && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                No puedes iniciar el POS si no abres la caja.
+              </Alert>
+            )}
+
             <Stack spacing={1} mt={2}>
               <Button
                 variant="contained"
                 color="primary"
                 fullWidth
                 onClick={() => setModalOpen(true)}
-                disabled={loading}
+                disabled={loading || !cajaDisponible}
                 sx={{ py: 1.2, fontWeight: 600 }}
               >
-                {loading ? 'Procesando...' : '💳 Finalizar Venta'}
+                {cajaDisponible ? (loading ? 'Procesando...' : '💳 Finalizar Venta') : 'Abre la caja para vender'}
               </Button>
               <Button variant="text" color="error" onClick={vaciarCarrito}>
                 🗑 Vaciar Carrito
@@ -196,3 +215,12 @@ export default function CarritoDrawer({ open, onClose }) {
     </>
   );
 }
+
+
+
+
+
+
+
+
+

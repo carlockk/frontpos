@@ -6,7 +6,8 @@ const CajaContext = createContext();
 export const useCaja = () => useContext(CajaContext);
 
 export function CajaProvider({ children }) {
-  const [cajaAbierta, setCajaAbierta] = useState(false);
+  const [cajaAbierta, setCajaAbierta] = useState(null);
+  const [cajaVerificada, setCajaVerificada] = useState(false);
 
   useEffect(() => {
     async function verificarCaja() {
@@ -16,6 +17,8 @@ export function CajaProvider({ children }) {
         setCajaAbierta(!!abierta);
       } catch (error) {
         console.error('Error al verificar caja en contexto:', error);
+      } finally {
+        setCajaVerificada(true);
       }
     }
 
@@ -23,7 +26,7 @@ export function CajaProvider({ children }) {
   }, []);
 
   return (
-    <CajaContext.Provider value={{ cajaAbierta, setCajaAbierta }}>
+    <CajaContext.Provider value={{ cajaAbierta, setCajaAbierta, cajaVerificada }}>
       {children}
     </CajaContext.Provider>
   );
