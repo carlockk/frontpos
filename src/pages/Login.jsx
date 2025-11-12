@@ -96,22 +96,14 @@ export default function Login() {
               src={logo}
               alt="Logo"
               sx={{
-                width: 80,
-                height: 80,
+                width: 120,
+                height: 52,
                 objectFit: 'contain',
                 mb: 1,
                 filter: 'drop-shadow(0 10px 20px rgba(59,130,246,0.5))',
               }}
             />
-            <Typography
-              variant="overline"
-              sx={{
-                letterSpacing: 4,
-                color: '#93c5fd',
-                fontSize: 11,
-              }}
-            >
-            </Typography>
+
             <Typography
               variant="h5"
               sx={{ fontWeight: 700, color: '#fff', mt: 1 }}
