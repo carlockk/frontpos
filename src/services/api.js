@@ -1,8 +1,19 @@
 import axios from 'axios';
 
-// ✅ Instancia base de la API usando variable de entorno
+// ✅ Resolver base de API y base de archivos a partir de la variable de entorno
+const rawBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+
+// Normalizamos para que SIEMPRE tenga /api al final
+const API_BASE = rawBase.endsWith('/api')
+  ? rawBase
+  : `${rawBase.replace(/\/+$/, '')}/api`;
+
+// Base para archivos estáticos (/uploads), sin /api
+export const FILES_BASE = API_BASE.replace(/\/api\/?$/, '');
+
+// Instancia base de la API usando la URL normalizada
 const API = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api',
+  baseURL: API_BASE,
 });
 
 // ─────────────────────────────────────────────

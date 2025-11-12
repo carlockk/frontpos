@@ -105,14 +105,22 @@ export default function Ticket() {
           <Typography align="center" fontSize="0.75rem">{fechaHora}</Typography>
           <hr />
 
-          {venta.productos.map((item, i) => (
-            <Box key={i} sx={{ mb: 1 }}>
-              <Typography>{item.nombre} x{item.cantidad}</Typography>
-              {item.observacion && (
-                <Typography variant="caption">Obs: {item.observacion}</Typography>
-              )}
-              <Typography>${item.precio_unitario.toLocaleString()} c/u</Typography>
-            </Box>
+        {venta.productos.map((item, i) => (
+          <Box key={i} sx={{ mb: 1 }}>
+            <Typography>
+              {item.nombre}
+              {item.varianteNombre ? ` (${item.varianteNombre})` : ''} x{item.cantidad}
+            </Typography>
+            {Array.isArray(item.atributos) && item.atributos.length > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                {item.atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(' | ')}
+              </Typography>
+            )}
+            {item.observacion && (
+              <Typography variant="caption">Obs: {item.observacion}</Typography>
+            )}
+            <Typography>${item.precio_unitario.toLocaleString()} c/u</Typography>
+          </Box>
           ))}
 
           <hr />

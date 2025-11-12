@@ -11,10 +11,13 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { editarProducto, obtenerCategorias } from '../services/api';
+import VariantesForm from './VariantesForm';
 
 export default function ModalEditarProducto({ open, onClose, producto, onActualizado }) {
   const [form, setForm] = useState({
@@ -30,6 +33,8 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
   const [categorias, setCategorias] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [usaVariantes, setUsaVariantes] = useState(false);
+  const [variantes, setVariantes] = useState([]);
 
   useEffect(() => {
     if (producto) {
@@ -41,6 +46,18 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
         categoria: producto.categoria?._id || producto.categoria || '',
         stock: producto.stock ?? ''
       });
+      setUsaVariantes(Array.isArray(producto.variantes) && producto.variantes.length > 0);
+      setVariantes(
+        (producto.variantes || []).map((v) => ({
+          _id: v._id,
+          nombre: v.nombre || '',
+          color: v.color || '',
+          talla: v.talla || '',
+          sku: v.sku || '',
+          precio: v.precio === 0 || v.precio ? String(v.precio) : '',
+          stock: v.stock === 0 || v.stock ? String(v.stock) : ''
+        }))
+      );
       setImagenNueva(null);
       setError('');
     }
@@ -70,9 +87,16 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
       return;
     }
 
-    if (form.stock !== '' && parseInt(form.stock) < 0) {
+    if (!usaVariantes && form.stock !== '' && parseInt(form.stock, 10) < 0) {
       setError('El stock no puede ser negativo');
       return;
+    }
+
+    if (usaVariantes) {
+      if (variantes.length === 0 || variantes.some((v) => !v.nombre.trim())) {
+        setError('Agrega al menos una variante con nombre.');
+        return;
+      }
     }
 
     const data = new FormData();
@@ -83,18 +107,22 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
     if (imagenNueva) {
       data.append('imagen', imagenNueva);
     }
-          //data.append('stock', form.stock); probare con la de abajo por mientras,si no funciona la vuelvo a usar
-     data.append('stock', form.stock !== '' ? parseInt(form.stock) : '');
+    if (usaVariantes) {
+      data.append('stock', '');
+      data.append('variantes', JSON.stringify(variantes));
+    } else {
+      data.append('stock', form.stock !== '' ? parseInt(form.stock, 10) : '');
+    }
 
     try {
       setCargando(true);
       await editarProducto(producto._id, data);
-      alert('✅ Cambios guardados correctamente');
+      alert('Cambios guardados correctamente');
       onClose();
-      onActualizado();
+      onActualizado?.();
     } catch (err) {
       console.error(err);
-      setError('❌ Error al guardar los cambios');
+      setError('Error al guardar los cambios');
     } finally {
       setCargando(false);
     }
@@ -102,9 +130,13 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>✏️ Editar Producto</DialogTitle>
+      <DialogTitle>Editar Producto</DialogTitle>
       <DialogContent>
-        {error && <Alert severity="error" sx={{ mt: 1, mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mt: 1, mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <TextField
           fullWidth
@@ -134,15 +166,33 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
           sx={{ mt: 2 }}
         />
 
-        <TextField
-          fullWidth
-          type="number"
-          label="Stock (opcional)"
-          name="stock"
-          value={form.stock}
-          onChange={handleChange}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={usaVariantes}
+              onChange={(e) => {
+                setUsaVariantes(e.target.checked);
+                if (!e.target.checked) {
+                  setVariantes([]);
+                }
+              }}
+            />
+          }
+          label="Controlar stock por variantes"
           sx={{ mt: 2 }}
         />
+
+        {!usaVariantes && (
+          <TextField
+            fullWidth
+            type="number"
+            label="Stock (opcional)"
+            name="stock"
+            value={form.stock}
+            onChange={handleChange}
+            sx={{ mt: 2 }}
+          />
+        )}
 
         <FormControl fullWidth sx={{ mt: 2 }}>
           <InputLabel id="categoria-label">Categoría</InputLabel>
@@ -161,13 +211,24 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
           </Select>
         </FormControl>
 
+        {usaVariantes && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              Variantes
+            </Typography>
+            <VariantesForm variantes={variantes} onChange={setVariantes} />
+          </Box>
+        )}
+
         {form.imagen_url && (
           <Box sx={{ mt: 2, mb: 1, textAlign: 'center' }}>
             <Typography variant="body2">Imagen actual:</Typography>
             <img
-              src={form.imagen_url.startsWith('/uploads')
-                ? `http://localhost:5000${form.imagen_url}`
-                : form.imagen_url}
+              src={
+                form.imagen_url.startsWith('/uploads')
+                  ? `http://localhost:5000${form.imagen_url}`
+                  : form.imagen_url
+              }
               alt="preview"
               width={80}
               height={80}

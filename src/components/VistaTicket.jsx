@@ -109,7 +109,15 @@ export default function VistaTicket({ venta }) {
 
         {venta.productos.map((item, i) => (
           <Box key={i} sx={{ mb: 1 }}>
-            <Typography>{item.nombre} x{item.cantidad}</Typography>
+            <Typography>
+              {item.nombre}
+              {item.varianteNombre ? ` (${item.varianteNombre})` : ''} x{item.cantidad}
+            </Typography>
+            {Array.isArray(item.atributos) && item.atributos.length > 0 && (
+              <Typography variant="caption">
+                {item.atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(' | ')}
+              </Typography>
+            )}
             {item.observacion && (
               <Typography variant="caption">Obs: {item.observacion}</Typography>
             )}

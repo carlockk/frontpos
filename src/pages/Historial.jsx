@@ -29,7 +29,10 @@ export default function Historial() {
     const b = busqueda.toLowerCase();
     const resultado = ventas.filter(v =>
       String(v.numero_pedido).includes(b) ||
-      v.productos.some(p => p.nombre.toLowerCase().includes(b))
+      v.productos.some(p =>
+        p.nombre.toLowerCase().includes(b) ||
+        (p.varianteNombre || '').toLowerCase().includes(b)
+      )
     );
     setFiltradas(resultado);
   }, [busqueda, ventas]);

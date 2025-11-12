@@ -42,7 +42,10 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
       nombre: p.nombre,
       precio_unitario: p.precio,
       cantidad: p.cantidad,
-      observacion: p.observacion
+      observacion: p.observacion,
+      varianteId: p.varianteId || null,
+      varianteNombre: p.varianteNombre || '',
+      atributos: Array.isArray(p.atributos) ? p.atributos : []
     }));
 
     try {
@@ -91,7 +94,10 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
       nombre: p.nombre,
       precio_unitario: p.precio,
       cantidad: p.cantidad,
-      observacion: p.observacion
+      observacion: p.observacion,
+      varianteId: p.varianteId || null,
+      varianteNombre: p.varianteNombre || '',
+      atributos: Array.isArray(p.atributos) ? p.atributos : []
     }));
 
     try {
@@ -135,31 +141,78 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
           <Typography variant="body1" sx={{ mt: 2 }}>El carrito está vacío.</Typography>
         ) : (
           <>
-            {carrito.map(item => (
-              <Box key={item._id} sx={{ mb: 2, p: 2, borderRadius: 2, bgcolor: theme.palette.background.paper, border: '1px solid', borderColor: theme.palette.divider }}>
-                <Typography fontWeight={600}>{item.nombre}</Typography>
+            {carrito.map(item => {
+              const sinStockExtra =
+                typeof item.stockDisponible === 'number' && item.cantidad >= item.stockDisponible;
+              return (
+                <Box
+                  key={item.idCarrito || item._id}
+                  sx={{
+                    mb: 2,
+                    p: 2,
+                    borderRadius: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: '1px solid',
+                    borderColor: theme.palette.divider
+                  }}
+                >
+                  <Typography fontWeight={600}>{item.nombre}</Typography>
+                  {item.varianteNombre && (
+                    <Typography variant="body2" color="text.secondary">
+                      Variante: {item.varianteNombre}
+                    </Typography>
+                  )}
+                  {Array.isArray(item.atributos) && item.atributos.length > 0 && (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" mt={0.5}>
+                      {item.atributos.map((attr, idx) => (
+                        <Typography
+                          key={`${item.idCarrito}-attr-${idx}`}
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, px: 0.5 }}
+                        >
+                          {attr.nombre}: {attr.valor}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  )}
+                  {typeof item.stockDisponible === 'number' && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                      Disponible: {item.stockDisponible}
+                    </Typography>
+                  )}
 
-                <Stack direction="row" spacing={1} alignItems="center" mt={1}>
-                  <IconButton size="small" onClick={() => actualizarCantidad(item._id, item.cantidad - 1)}>
-                    <Remove fontSize="small" />
-                  </IconButton>
-                  <Typography>{item.cantidad}</Typography>
-                  <IconButton size="small" onClick={() => actualizarCantidad(item._id, item.cantidad + 1)}>
-                    <Add fontSize="small" />
-                  </IconButton>
-                </Stack>
+                  <Stack direction="row" spacing={1} alignItems="center" mt={1}>
+                    <IconButton size="small" onClick={() => actualizarCantidad(item.idCarrito, item.cantidad - 1)}>
+                      <Remove fontSize="small" />
+                    </IconButton>
+                    <Typography>{item.cantidad}</Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => actualizarCantidad(item.idCarrito, item.cantidad + 1)}
+                      disabled={sinStockExtra}
+                    >
+                      <Add fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                  {sinStockExtra && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                      Alcanzaste el stock disponible
+                    </Typography>
+                  )}
 
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Observación"
-                  variant="outlined"
-                  value={item.observacion}
-                  onChange={e => actualizarObservacion(item._id, e.target.value)}
-                  sx={{ mt: 1 }}
-                />
-              </Box>
-            ))}
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Observación"
+                    variant="outlined"
+                    value={item.observacion}
+                    onChange={e => actualizarObservacion(item.idCarrito, e.target.value)}
+                    sx={{ mt: 1 }}
+                  />
+                </Box>
+              );
+            })}
 
             <Typography variant="h6" sx={{ mt: 2, textAlign: 'right' }}>
               Total: <strong>${total.toFixed(0)}</strong>
