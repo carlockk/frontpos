@@ -111,7 +111,6 @@ export default function Login() {
                 fontSize: 11,
               }}
             >
-              POS SAIL
             </Typography>
             <Typography
               variant="h5"
