@@ -11,7 +11,7 @@ import { CajaProvider } from './context/CajaContext';
 import Sidebar from './components/Sidebar';
 import Productos from './pages/Productos';
 import CrearProducto from './pages/CrearProducto';
-import CrearCategoria from './pages/CrearCategoria';
+import Categorias from './pages/CrearCategoria';
 import POS from './pages/POS';
 import Ticket from './pages/Ticket';
 import Historial from './pages/Historial';
@@ -81,7 +81,7 @@ export default function App() {
             <Route path="/login" element={!usuario ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/" element={usuario ? <Productos /> : <Navigate to="/login" />} />
             <Route path="/crear" element={usuario?.rol === 'admin' ? <CrearProducto /> : <Navigate to="/" />} />
-            <Route path="/crear-categoria" element={usuario?.rol === 'admin' ? <CrearCategoria /> : <Navigate to="/" />} />
+            <Route path="/categorias" element={usuario ? <Categorias /> : <Navigate to="/login" />} />
             <Route path="/crear-usuario" element={usuario?.rol === 'admin' ? <CrearUsuario /> : <Navigate to="/" />} />
             <Route path="/usuarios" element={usuario?.rol === 'admin' ? <ListaUsuarios /> : <Navigate to="/" />} />
             <Route path="/pos" element={usuario ? <POS /> : <Navigate to="/login" />} />

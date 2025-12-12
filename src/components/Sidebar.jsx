@@ -122,8 +122,8 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             <ListItemButton component={Link} to="/crear" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
               <ListItemText primary="Crear Producto" />
             </ListItemButton>
-            <ListItemButton component={Link} to="/crear-categoria" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-              <ListItemText primary="Crear Categoría" />
+            <ListItemButton component={Link} to="/categorias" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
+              <ListItemText primary="Categorias" />
             </ListItemButton>
           </List>
         </Collapse>
