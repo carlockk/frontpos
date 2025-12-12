@@ -45,7 +45,6 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   const { cajaAbierta } = useCaja(); // ✅ Estado dinámico de caja
 
   const [openMenus, setOpenMenus] = useState({
-    productos: false,
     caja: false,
     usuarios: false,
   });
@@ -53,7 +52,11 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   useEffect(() => {
     const saved = localStorage.getItem('sidebarMenus');
     if (saved) {
-      setOpenMenus(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      setOpenMenus({
+        caja: Boolean(parsed.caja),
+        usuarios: Boolean(parsed.usuarios),
+      });
     }
   }, []);
 
@@ -109,24 +112,20 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         </ListItem>
 
         {/* Productos */}
-        <ListItemButton onClick={() => toggleMenu('productos')} sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-          <Box sx={{ mr: 2 }}><InventoryIcon /></Box>
-          <ListItemText primary="Productos" />
-          {openMenus.productos ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={openMenus.productos} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <ListItemButton component={Link} to="/" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-              <ListItemText primary="Ver Productos" />
-            </ListItemButton>
-            <ListItemButton component={Link} to="/crear" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-              <ListItemText primary="Crear Producto" />
-            </ListItemButton>
-            <ListItemButton component={Link} to="/categorias" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-              <ListItemText primary="Categorias" />
-            </ListItemButton>
-          </List>
-        </Collapse>
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+            <Box sx={{ mr: 2 }}><InventoryIcon /></Box>
+            <ListItemText primary="Productos" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Categorias */}
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/categorias" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+            <Box sx={{ mr: 2 }}><StoreIcon /></Box>
+            <ListItemText primary="Categorias" />
+          </ListItemButton>
+        </ListItem>
 
         {/* POS */}
         <ListItem disablePadding>

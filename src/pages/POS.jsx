@@ -39,6 +39,7 @@ import SelectorVariantes from '../components/SelectorVariantes';
 
 // ✅ Ahora usamos la base de archivos que sale de api.js
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
+const MIN_STOCK_ALERT = 3;
 
 export default function POS() {
   const [productos, setProductos] = useState([]);
@@ -88,6 +89,7 @@ export default function POS() {
     producto.variantes.length > 0;
 
   const normalizarNumero = (valor) => {
+    if (valor === null || valor === undefined || valor === '') return null;
     const numero = Number(valor);
     return Number.isFinite(numero) ? numero : null;
   };
@@ -97,10 +99,11 @@ export default function POS() {
     if (stockVirtual !== null) return stockVirtual;
 
     if (tieneVariantes(producto)) {
-      return producto.variantes.reduce(
-        (acc, vari) => acc + (normalizarNumero(vari.stock) ?? 0),
-        0
-      );
+      const stocks = producto.variantes
+        .map((vari) => normalizarNumero(vari.stock))
+        .filter((stock) => stock !== null);
+      if (stocks.length === 0) return null;
+      return stocks.reduce((acc, val) => acc + val, 0);
     }
 
     return normalizarNumero(producto?.stock);
@@ -160,14 +163,15 @@ export default function POS() {
 
   const handleAgregar = (producto) => {
     if (tieneVariantes(producto)) {
-      const variantesConStock = producto.variantes.filter(
-        (v) => Number(v.stock) > 0
-      );
+      const variantesConStock = producto.variantes.filter((v) => {
+        const stockVar = normalizarNumero(v.stock);
+        return stockVar === null || stockVar > 0;
+      });
       if (variantesConStock.length === 0) {
         alert('Todas las variantes de este producto están sin stock.');
         return;
       }
-      setProductoConVariantes(producto);
+      setProductoConVariantes({ ...producto, variantes: variantesConStock });
       return;
     }
 
@@ -352,6 +356,8 @@ export default function POS() {
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
           const agotado = mostrarStock ? stockTotal === 0 : false;
+          const stockBajo =
+            mostrarStock && !agotado && stockTotal <= MIN_STOCK_ALERT;
 
           const resumenVariantes = tieneVariantes(prod)
             ? prod.variantes.slice(0, 2)
@@ -505,7 +511,7 @@ export default function POS() {
                     ${prod.precio.toLocaleString('es-CL')}
                   </Typography>
 
-                  {mostrarStock && (
+                  {mostrarStock ? (
                     <Typography
                       variant="caption"
                       sx={{
@@ -513,29 +519,55 @@ export default function POS() {
                         py: 0.2,
                         borderRadius: 999,
                         border: `1px solid ${cardBorderColor}`,
-                        color: agotado ? '#f87171' : stockOkColor,
+                        color: agotado
+                          ? '#f87171'
+                          : stockBajo
+                            ? '#f59e0b'
+                            : stockOkColor,
                         fontWeight: 600,
                         letterSpacing: 0.5
                       }}
                     >
                       {agotado
                         ? 'AGOTADO'
-                        : `Stock: ${stockTotal}`}
+                        : stockBajo
+                          ? `Stock bajo: ${stockTotal}`
+                          : `Stock: ${stockTotal}`}
+                    </Typography>
+                  ) : (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        px: 1,
+                        py: 0.2,
+                        borderRadius: 999,
+                        border: `1px solid ${cardBorderColor}`,
+                        color: descColor,
+                        fontWeight: 600,
+                        letterSpacing: 0.5
+                      }}
+                    >
+                      Stock no controlado
                     </Typography>
                   )}
                 </Box>
 
                 {hayVariantes && (
                   <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                    {resumenVariantes.map((vari) => (
-                      <Typography
-                        key={`${prod._id}-${vari._id || vari.nombre}`}
-                        variant="caption"
-                        color={descColor}
-                      >
-                        {vari.nombre} - Stock {vari.stock ?? 0}
-                      </Typography>
-                    ))}
+                    {resumenVariantes.map((vari) => {
+                      const variStock = normalizarNumero(vari.stock);
+                      const stockLabel =
+                        variStock === null ? '∞' : variStock;
+                      return (
+                        <Typography
+                          key={`${prod._id}-${vari._id || vari.nombre}`}
+                          variant="caption"
+                          color={descColor}
+                        >
+                          {vari.nombre} - Stock {stockLabel}
+                        </Typography>
+                      );
+                    })}
                     {prod.variantes.length >
                       resumenVariantes.length && (
                       <Typography

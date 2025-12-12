@@ -15,7 +15,8 @@ import {
   DialogActions,
   DialogContent,
   Button,
-  useTheme,
+  Snackbar,
+  Alert,
   Pagination,
   Stack,
   Chip,
@@ -36,12 +37,11 @@ import {
 
 import ModalEditarProducto from '../components/ModalEditarProducto';
 import BuscadorProducto from '../components/BuscadorProducto';
+import ProductoForm from '../components/ProductoForm';
 
 const BASE_URL = FILES_BASE;
 
 export default function Productos() {
-  const theme = useTheme();
-
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
@@ -49,6 +49,9 @@ export default function Productos() {
   const [openEditar, setOpenEditar] = useState(false);
   const [detalleAbierto, setDetalleAbierto] = useState(null);
   const [productoStockModal, setProductoStockModal] = useState(null);
+  const [openCrear, setOpenCrear] = useState(false);
+  const [mensaje, setMensaje] = useState('');
+  const [imagenAmpliada, setImagenAmpliada] = useState(null);
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
@@ -138,6 +141,30 @@ export default function Productos() {
     setDetalleAbierto((prev) => (prev === id ? null : id));
   };
 
+  const handleProductoCreado = async () => {
+    await cargarDatos();
+    setPaginaActual(1);
+    setOpenCrear(false);
+    setMensaje('Producto creado correctamente');
+  };
+
+  const handleCerrarMensaje = () => setMensaje('');
+
+  const obtenerImagenUrl = (prod) => {
+    if (!prod.imagen_url) return '';
+    return prod.imagen_url.startsWith('/uploads')
+      ? `${BASE_URL}${prod.imagen_url}`
+      : prod.imagen_url;
+  };
+
+  const handleAbrirImagen = (prod) => {
+    const url = obtenerImagenUrl(prod);
+    if (!url) return;
+    setImagenAmpliada({ src: url, alt: prod.nombre });
+  };
+
+  const handleCerrarImagen = () => setImagenAmpliada(null);
+
   const filtrarProductos = productos.filter((prod) => {
     const nombreOk = prod.nombre
       .toLowerCase()
@@ -169,13 +196,23 @@ export default function Productos() {
 
   return (
     <Box sx={{ mt: 4, px: 2 }}>
-      <Typography
-        variant="h4"
-        gutterBottom
-        sx={{ fontWeight: 'bold', mb: 3 }}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 2,
+          mb: 3
+        }}
       >
-        Gestión de Productos
-      </Typography>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          Gestion de Productos
+        </Typography>
+        <Button variant="contained" onClick={() => setOpenCrear(true)}>
+          Crear nuevo producto
+        </Button>
+      </Box>
 
       {/* Filtros y buscador */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -213,6 +250,7 @@ export default function Productos() {
               const hayVariantes = tieneVariantes(prod);
               const stockTotal = obtenerStockTotal(prod);
               const totalVisible = stockTotal;
+              const imagenUrl = obtenerImagenUrl(prod);
 
               return (
                 <Fragment key={prod._id}>
@@ -255,7 +293,10 @@ export default function Productos() {
                           sx={{ flexWrap: 'wrap' }}
                         >
                           <Typography fontWeight="bold">
-                            Total: {totalVisible}
+                            Total:{' '}
+                            {totalVisible === null
+                              ? 'No controlado'
+                              : totalVisible}
                           </Typography>
                           <Button
                             size="small"
@@ -266,13 +307,18 @@ export default function Productos() {
                           </Button>
                         </Stack>
                       ) : (
-                        <Typography>{stockTotal}</Typography>
+                        <Typography>
+                          {stockTotal === null
+                            ? 'No controlado'
+                            : stockTotal}
+                        </Typography>
                       )}
                     </TableCell>
 
                     <TableCell>
-                      {prod.imagen_url ? (
+                      {imagenUrl ? (
                         <Box
+                          onClick={() => handleAbrirImagen(prod)}
                           sx={{
                             width: 60,
                             height: 60,
@@ -280,16 +326,15 @@ export default function Productos() {
                             borderRadius: '6px',
                             border: '4px solid white',
                             boxShadow: '0 0 4px rgba(0,0,0,0.3)',
-                            backgroundColor: '#f4f4f4'
+                            backgroundColor: '#f4f4f4',
+                            cursor: 'pointer',
+                            transition: 'transform 0.15s ease',
+                            '&:hover': { transform: 'scale(1.03)' }
                           }}
                         >
                           <Box
                             component="img"
-                            src={
-                              prod.imagen_url.startsWith('/uploads')
-                                ? `${BASE_URL}${prod.imagen_url}`
-                                : prod.imagen_url
-                            }
+                            src={imagenUrl}
                             alt={prod.nombre}
                             sx={{
                               width: '100%',
@@ -402,6 +447,22 @@ export default function Productos() {
         </Box>
       </Paper>
 
+      {/* Modal de creacion */}
+      <Dialog
+        open={openCrear}
+        onClose={() => setOpenCrear(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Crear nuevo producto</DialogTitle>
+        <DialogContent dividers>
+          <ProductoForm
+            onSuccess={handleProductoCreado}
+            onCancel={() => setOpenCrear(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de confirmación de eliminación */}
       <Dialog open={openConfirm} onClose={() => setOpenConfirm(false)}>
         <DialogTitle>Eliminar producto</DialogTitle>
@@ -486,6 +547,55 @@ export default function Productos() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Imagen ampliada */}
+      <Dialog
+        open={Boolean(imagenAmpliada)}
+        onClose={handleCerrarImagen}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>{imagenAmpliada?.alt || 'Imagen'}</DialogTitle>
+        <DialogContent dividers>
+          {imagenAmpliada && (
+            <Box
+              component="img"
+              src={imagenAmpliada.src}
+              alt={imagenAmpliada.alt}
+              sx={{
+                width: '100%',
+                height: 'auto',
+                maxHeight: '70vh',
+                objectFit: 'contain'
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions>
+          {imagenAmpliada?.src && (
+            <Button
+              component="a"
+              href={imagenAmpliada.src}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir en nueva pestaña
+            </Button>
+          )}
+          <Button onClick={handleCerrarImagen}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(mensaje)}
+        autoHideDuration={4000}
+        onClose={handleCerrarMensaje}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCerrarMensaje} severity="success" sx={{ width: '100%' }}>
+          {mensaje}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
