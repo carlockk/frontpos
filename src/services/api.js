@@ -16,6 +16,43 @@ const API = axios.create({
   baseURL: API_BASE,
 });
 
+API.interceptors.request.use((config) => {
+  const stored = localStorage.getItem('usuario');
+  const storedLocal = localStorage.getItem('localSeleccionado');
+
+  let role = '';
+  let localId = '';
+  let userId = '';
+
+  if (stored) {
+    try {
+      const usuario = JSON.parse(stored);
+      role = typeof usuario?.rol === 'string' ? usuario.rol : '';
+      userId = usuario?._id || '';
+      if (role && role !== 'superadmin') {
+        localId = usuario?.local?._id || '';
+      } else if (storedLocal) {
+        const localParsed = JSON.parse(storedLocal);
+        localId = localParsed?._id || '';
+      }
+    } catch (err) {
+      // ignore parse errors
+    }
+  }
+
+  if (role) {
+    config.headers['x-user-role'] = role;
+  }
+  if (localId) {
+    config.headers['x-local-id'] = localId;
+  }
+  if (userId) {
+    config.headers['x-user-id'] = userId;
+  }
+
+  return config;
+});
+
 // ─────────────────────────────────────────────
 // 🛍️ Productos
 // ─────────────────────────────────────────────
@@ -82,3 +119,11 @@ export const eliminarCategoria = (id) => API.delete(`/categorias/${id}`);
 export const guardarTicket = (data) => API.post('/tickets', data);
 export const obtenerTicketsAbiertos = () => API.get('/tickets');
 export const eliminarTicket = (id) => API.delete(`/tickets/${id}`);
+
+// ─────────────────────────────────────────────
+// 🏬 Locales
+// ─────────────────────────────────────────────
+export const obtenerLocales = () => API.get('/locales');
+export const crearLocal = (data) => API.post('/locales', data);
+export const editarLocal = (id, data) => API.put(`/locales/${id}`, data);
+export const eliminarLocal = (id) => API.delete(`/locales/${id}`);

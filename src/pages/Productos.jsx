@@ -38,10 +38,13 @@ import {
 import ModalEditarProducto from '../components/ModalEditarProducto';
 import BuscadorProducto from '../components/BuscadorProducto';
 import ProductoForm from '../components/ProductoForm';
+import { useAuth } from '../context/AuthContext';
 
 const BASE_URL = FILES_BASE;
 
 export default function Productos() {
+  const { usuario } = useAuth();
+  const puedeEliminar = usuario?.rol !== 'cajero';
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
@@ -114,6 +117,7 @@ export default function Productos() {
   };
 
   const handleEliminarClick = (producto) => {
+    if (!puedeEliminar) return;
     setProductoSeleccionado(producto);
     setOpenConfirm(true);
   };
@@ -361,12 +365,14 @@ export default function Productos() {
                       >
                         <EditIcon />
                       </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleEliminarClick(prod)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      {puedeEliminar && (
+                        <IconButton
+                          color="error"
+                          onClick={() => handleEliminarClick(prod)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
 

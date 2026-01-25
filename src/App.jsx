@@ -23,6 +23,7 @@ import ListaUsuarios from './pages/ListaUsuarios';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import TicketsAbiertos from './pages/TicketsAbiertos'; // ✅ NUEVO
+import Locales from './pages/Locales';
 
 const drawerWidth = 240;
 
@@ -80,18 +81,34 @@ export default function App() {
           <Routes>
             <Route path="/login" element={!usuario ? <Login /> : <Navigate to="/dashboard" />} />
             <Route path="/" element={usuario ? <Productos /> : <Navigate to="/login" />} />
-            <Route path="/crear" element={usuario?.rol === 'admin' ? <CrearProducto /> : <Navigate to="/" />} />
+            <Route
+              path="/crear"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <CrearProducto /> : <Navigate to="/" />}
+            />
             <Route path="/categorias" element={usuario ? <Categorias /> : <Navigate to="/login" />} />
-            <Route path="/crear-usuario" element={usuario?.rol === 'admin' ? <CrearUsuario /> : <Navigate to="/" />} />
-            <Route path="/usuarios" element={usuario?.rol === 'admin' ? <ListaUsuarios /> : <Navigate to="/" />} />
+            <Route
+              path="/crear-usuario"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <CrearUsuario /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/usuarios"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <ListaUsuarios /> : <Navigate to="/" />}
+            />
             <Route path="/pos" element={usuario ? <POS /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={usuario ? <Dashboard /> : <Navigate to="/login" />} />
             <Route path="/historial" element={usuario ? <Historial /> : <Navigate to="/login" />} />
-            <Route path="/caja" element={usuario?.rol === 'admin' ? <Caja /> : <Navigate to="/" />} />
-            <Route path="/historial-cajas" element={usuario?.rol === 'admin' ? <HistorialCajas /> : <Navigate to="/" />} />
+            <Route
+              path="/caja"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <Caja /> : <Navigate to="/" />}
+            />
+            <Route
+              path="/historial-cajas"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <HistorialCajas /> : <Navigate to="/" />}
+            />
             <Route path="/ticket" element={<Ticket />} />
             <Route path="/ticket-caja" element={<TicketCaja />} />
             <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} /> {/* ✅ NUEVO */}
+            <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
           </Routes>
         </Box>
       </Box>

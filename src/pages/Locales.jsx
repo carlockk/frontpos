@@ -1,4 +1,3 @@
-// src/pages/CrearCategoria.jsx
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -27,19 +26,19 @@ import DeleteIcon from '@mui/icons-material/DeleteOutline';
 
 import { useAuth } from '../context/AuthContext';
 import {
-  obtenerCategorias,
-  crearCategoria,
-  editarCategoria,
-  eliminarCategoria
+  obtenerLocales,
+  crearLocal,
+  editarLocal,
+  eliminarLocal
 } from '../services/api';
 
-const emptyForm = { nombre: '', descripcion: '' };
+const emptyForm = { nombre: '', direccion: '', telefono: '', correo: '' };
 
-export default function Categorias() {
+export default function Locales() {
   const { usuario } = useAuth();
   const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
 
-  const [categorias, setCategorias] = useState([]);
+  const [locales, setLocales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -52,21 +51,21 @@ export default function Categorias() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const fetchCategorias = async () => {
+  const fetchLocales = async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await obtenerCategorias();
-      setCategorias(res.data || []);
+      const res = await obtenerLocales();
+      setLocales(res.data || []);
     } catch (err) {
-      setError('No se pudieron cargar las categorias.');
+      setError('No se pudieron cargar los locales.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCategorias();
+    fetchLocales();
   }, []);
 
   const openCreate = () => {
@@ -77,12 +76,14 @@ export default function Categorias() {
     setError('');
   };
 
-  const openEdit = (cat) => {
+  const openEdit = (local) => {
     setForm({
-      nombre: cat.nombre || '',
-      descripcion: cat.descripcion || ''
+      nombre: local.nombre || '',
+      direccion: local.direccion || '',
+      telefono: local.telefono || '',
+      correo: local.correo || ''
     });
-    setEditingId(cat._id);
+    setEditingId(local._id);
     setDialogOpen(true);
     setInfo('');
     setError('');
@@ -93,38 +94,40 @@ export default function Categorias() {
     setInfo('');
 
     if (!form.nombre.trim()) {
-      setError('Ingresa un nombre para la categoria.');
+      setError('Ingresa un nombre para el local.');
       return;
     }
 
     const payload = {
       nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim()
+      direccion: form.direccion.trim(),
+      telefono: form.telefono.trim(),
+      correo: form.correo.trim()
     };
 
     try {
       setSaving(true);
       if (editingId) {
-        await editarCategoria(editingId, payload);
-        setInfo('Categoria actualizada.');
+        await editarLocal(editingId, payload);
+        setInfo('Local actualizado.');
       } else {
-        await crearCategoria(payload);
-        setInfo('Categoria creada.');
+        await crearLocal(payload);
+        setInfo('Local creado.');
       }
       setDialogOpen(false);
       setForm(emptyForm);
       setEditingId(null);
-      fetchCategorias();
+      fetchLocales();
     } catch (err) {
-      const msg = err?.response?.data?.error || 'No se pudo guardar la categoria.';
+      const msg = err?.response?.data?.error || 'No se pudo guardar el local.';
       setError(msg);
     } finally {
       setSaving(false);
     }
   };
 
-  const confirmDelete = (cat) => {
-    setDeleteTarget(cat);
+  const confirmDelete = (local) => {
+    setDeleteTarget(local);
     setError('');
     setInfo('');
   };
@@ -134,12 +137,12 @@ export default function Categorias() {
 
     try {
       setDeleteLoading(true);
-      await eliminarCategoria(deleteTarget._id);
-      setInfo('Categoria eliminada.');
+      await eliminarLocal(deleteTarget._id);
+      setInfo('Local eliminado.');
       setDeleteTarget(null);
-      fetchCategorias();
+      fetchLocales();
     } catch (err) {
-      const msg = err?.response?.data?.error || 'No se pudo eliminar la categoria.';
+      const msg = err?.response?.data?.error || 'No se pudo eliminar el local.';
       setError(msg);
     } finally {
       setDeleteLoading(false);
@@ -168,10 +171,10 @@ export default function Categorias() {
         >
           <Box>
             <Typography variant="h5" gutterBottom>
-              Categorias
+              Locales
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Administra las categorias disponibles para tus productos.
+              Administra los locales disponibles en el sistema.
             </Typography>
           </Box>
 
@@ -181,7 +184,7 @@ export default function Categorias() {
               startIcon={<AddIcon />}
               onClick={openCreate}
             >
-              Crear nueva categoria
+              Crear nuevo local
             </Button>
           )}
         </Stack>
@@ -199,30 +202,34 @@ export default function Categorias() {
               <TableHead>
                 <TableRow>
                   <TableCell>Nombre</TableCell>
-                  <TableCell>Descripcion</TableCell>
+                  <TableCell>Direccion</TableCell>
+                  <TableCell>Telefono</TableCell>
+                  <TableCell>Correo</TableCell>
                   {isAdmin && <TableCell align="right">Acciones</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {categorias.length === 0 && (
+                {locales.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 3 : 2} align="center">
-                      No hay categorias registradas.
+                    <TableCell colSpan={isAdmin ? 5 : 4} align="center">
+                      No hay locales registrados.
                     </TableCell>
                   </TableRow>
                 )}
-                {categorias.map((cat) => (
-                  <TableRow key={cat._id}>
-                    <TableCell>{cat.nombre || '-'}</TableCell>
-                    <TableCell>{cat.descripcion || '-'}</TableCell>
+                {locales.map((local) => (
+                  <TableRow key={local._id}>
+                    <TableCell>{local.nombre || '-'}</TableCell>
+                    <TableCell>{local.direccion || '-'}</TableCell>
+                    <TableCell>{local.telefono || '-'}</TableCell>
+                    <TableCell>{local.correo || '-'}</TableCell>
                     {isAdmin && (
                       <TableCell align="right">
-                        <IconButton onClick={() => openEdit(cat)} size="small" sx={{ mr: 0.5 }}>
+                        <IconButton onClick={() => openEdit(local)} size="small" sx={{ mr: 0.5 }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
                         <IconButton
                           color="error"
-                          onClick={() => confirmDelete(cat)}
+                          onClick={() => confirmDelete(local)}
                           size="small"
                         >
                           <DeleteIcon fontSize="small" />
@@ -239,7 +246,7 @@ export default function Categorias() {
 
       <Dialog open={dialogOpen} onClose={closeDialog} fullWidth maxWidth="sm">
         <DialogTitle>
-          {editingId ? 'Editar categoria' : 'Crear categoria'}
+          {editingId ? 'Editar local' : 'Crear local'}
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -251,11 +258,19 @@ export default function Categorias() {
               required
             />
             <TextField
-              label="Descripcion"
-              value={form.descripcion}
-              onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
-              multiline
-              minRows={2}
+              label="Direccion"
+              value={form.direccion}
+              onChange={(e) => setForm((prev) => ({ ...prev, direccion: e.target.value }))}
+            />
+            <TextField
+              label="Telefono"
+              value={form.telefono}
+              onChange={(e) => setForm((prev) => ({ ...prev, telefono: e.target.value }))}
+            />
+            <TextField
+              label="Correo"
+              value={form.correo}
+              onChange={(e) => setForm((prev) => ({ ...prev, correo: e.target.value }))}
             />
           </Stack>
         </DialogContent>
@@ -272,10 +287,10 @@ export default function Categorias() {
       </Dialog>
 
       <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog} maxWidth="xs" fullWidth>
-        <DialogTitle>Eliminar categoria</DialogTitle>
+        <DialogTitle>Eliminar local</DialogTitle>
         <DialogContent dividers>
           <Typography>
-            Seguro que deseas eliminar la categoria "{deleteTarget?.nombre}"?
+            Seguro que deseas eliminar el local "{deleteTarget?.nombre}"?
           </Typography>
         </DialogContent>
         <DialogActions>

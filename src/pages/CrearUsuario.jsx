@@ -1,33 +1,69 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box, Typography, TextField, Button, MenuItem
 } from '@mui/material';
-import { crearUsuario } from '../services/api';
+import { crearUsuario, obtenerLocales } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function CrearUsuario() {
+  const { usuario, selectedLocal } = useAuth();
   const [form, setForm] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'cajero'
+    rol: 'cajero',
+    local: ''
   });
+  const [locales, setLocales] = useState([]);
+
+  useEffect(() => {
+    const cargarLocales = async () => {
+      try {
+        const res = await obtenerLocales();
+        setLocales(res.data || []);
+      } catch (err) {
+        setLocales([]);
+      }
+    };
+
+    cargarLocales();
+  }, []);
+
+  useEffect(() => {
+    if (!usuario) return;
+    if (usuario.rol === 'superadmin') {
+      setForm((prev) => ({ ...prev, local: selectedLocal?._id || '' }));
+    } else {
+      setForm((prev) => ({ ...prev, local: usuario?.local?._id || '' }));
+    }
+  }, [usuario, selectedLocal]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async () => {
-    const { nombre, email, password, rol } = form;
+    const { nombre, email, password, rol, local } = form;
 
     if (!nombre || !email || !password) {
       alert('Todos los campos son obligatorios');
       return;
     }
+    if (rol !== 'superadmin' && !local) {
+      alert('Selecciona un local para el usuario');
+      return;
+    }
 
     try {
-      await crearUsuario({ nombre, email, password, rol });
+      await crearUsuario({
+        nombre,
+        email,
+        password,
+        rol,
+        local: usuario?.rol === 'superadmin' ? (local || null) : usuario?.local?._id || null
+      });
       alert('✅ Usuario creado correctamente');
-      setForm({ nombre: '', email: '', password: '', rol: 'cajero' });
+      setForm({ nombre: '', email: '', password: '', rol: 'cajero', local: '' });
     } catch (err) {
       const msg = err?.response?.data?.error || 'Error inesperado';
       alert(`❌ ${msg}`);
@@ -77,6 +113,26 @@ export default function CrearUsuario() {
       >
         <MenuItem value="admin">Admin</MenuItem>
         <MenuItem value="cajero">Cajero</MenuItem>
+      </TextField>
+
+      <TextField
+        select
+        label="Local"
+        name="local"
+        fullWidth
+        value={form.local}
+        onChange={handleChange}
+        sx={{ mb: 2 }}
+        disabled={usuario?.rol !== 'superadmin' || locales.length === 0}
+      >
+        <MenuItem value="">
+          {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
+        </MenuItem>
+        {locales.map((local) => (
+          <MenuItem key={local._id} value={local._id}>
+            {local.nombre}
+          </MenuItem>
+        ))}
       </TextField>
 
       <Button variant="contained" fullWidth onClick={handleSubmit}>

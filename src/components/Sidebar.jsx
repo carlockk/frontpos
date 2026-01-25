@@ -11,7 +11,11 @@ import {
   Collapse,
   useMediaQuery,
   IconButton,
-  Tooltip
+  Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 
 import { useTheme } from '@mui/material/styles';
@@ -20,6 +24,7 @@ import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useCaja } from '../context/CajaContext';
+import { obtenerLocales } from '../services/api';
 
 // Icons
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
@@ -27,6 +32,7 @@ import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSaleOutlined';
 import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import StoreIcon from '@mui/icons-material/StoreOutlined';
+import StorefrontIcon from '@mui/icons-material/StorefrontOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -37,7 +43,7 @@ import logo from '../possail.png';
 const drawerWidth = 290;
 
 export default function Sidebar({ mobileOpen, toggleDrawer }) {
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, selectedLocal, seleccionarLocal } = useAuth();
   const theme = useTheme();
   const location = useLocation();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -48,6 +54,8 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     caja: false,
     usuarios: false,
   });
+  const [locales, setLocales] = useState([]);
+  const [localesLoading, setLocalesLoading] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarMenus');
@@ -69,6 +77,23 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
       toggleDrawer();
     }
   }, [location]);
+
+  useEffect(() => {
+    const cargarLocales = async () => {
+      if (usuario?.rol !== 'superadmin') return;
+      setLocalesLoading(true);
+      try {
+        const res = await obtenerLocales();
+        setLocales(res.data || []);
+      } catch (err) {
+        setLocales([]);
+      } finally {
+        setLocalesLoading(false);
+      }
+    };
+
+    cargarLocales();
+  }, [usuario?.rol]);
 
   const toggleMenu = (key) => {
     setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -99,6 +124,37 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
       👤 {usuario.email} ({usuario.rol})
     </Typography>
   )}
+  {usuario?.local?.nombre && (
+    <Typography variant="body2" sx={{ mt: 0.5, color: '#9ca3af', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
+      📍 {usuario.local.nombre}
+    </Typography>
+  )}
+  {usuario?.rol === 'superadmin' && (
+    <Box sx={{ mt: 2 }}>
+      <FormControl fullWidth size="small">
+        <InputLabel id="locales-select-label">Local activo</InputLabel>
+        <Select
+          labelId="locales-select-label"
+          label="Local activo"
+          value={selectedLocal?._id || ''}
+          onChange={(e) => {
+            const local = locales.find((item) => item._id === e.target.value);
+            seleccionarLocal(local || null);
+          }}
+          disabled={localesLoading || locales.length === 0}
+        >
+          <MenuItem value="">
+            {localesLoading ? 'Cargando...' : 'Selecciona un local'}
+          </MenuItem>
+          {locales.map((local) => (
+            <MenuItem key={local._id} value={local._id}>
+              {local.nombre}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    </Box>
+  )}
 </Box>
 
       <Divider sx={{ borderColor: '#374151' }} />
@@ -124,6 +180,14 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           <ListItemButton component={Link} to="/categorias" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
             <Box sx={{ mr: 2 }}><StoreIcon /></Box>
             <ListItemText primary="Categorias" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Locales */}
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/locales" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+            <Box sx={{ mr: 2 }}><StorefrontIcon /></Box>
+            <ListItemText primary="Locales" />
           </ListItemButton>
         </ListItem>
 
@@ -153,7 +217,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
 
 
         {/* Solo admin */}
-        {usuario?.rol === 'admin' && (
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
           <>
             {/* Caja */}
             <ListItemButton onClick={() => toggleMenu('caja')} sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>

@@ -6,17 +6,34 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import { obtenerUsuarios, eliminarUsuario, editarUsuario } from '../services/api';
+import {
+  obtenerUsuarios,
+  eliminarUsuario,
+  editarUsuario,
+  obtenerLocales
+} from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function ListaUsuarios() {
+  const { usuario } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
+  const [locales, setLocales] = useState([]);
   const [open, setOpen] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
-  const [editData, setEditData] = useState({ rol: '', password: '' });
+  const [editData, setEditData] = useState({ rol: '', password: '', local: '' });
 
   const cargarUsuarios = async () => {
     const res = await obtenerUsuarios();
     setUsuarios(res.data);
+  };
+
+  const cargarLocales = async () => {
+    try {
+      const res = await obtenerLocales();
+      setLocales(res.data || []);
+    } catch (err) {
+      setLocales([]);
+    }
   };
 
   const handleEliminar = async (id) => {
@@ -27,8 +44,12 @@ export default function ListaUsuarios() {
   };
 
   const handleAbrirEdicion = (usuario) => {
+    const localId =
+      typeof usuario?.local === 'string'
+        ? usuario.local
+        : usuario?.local?._id || '';
     setUsuarioEditando(usuario);
-    setEditData({ rol: usuario.rol, password: '' });
+    setEditData({ rol: usuario.rol, password: '', local: localId });
     setOpen(true);
   };
 
@@ -44,6 +65,7 @@ export default function ListaUsuarios() {
 
   useEffect(() => {
     cargarUsuarios();
+    cargarLocales();
   }, []);
 
   return (
@@ -55,6 +77,7 @@ export default function ListaUsuarios() {
             <TableRow>
               <TableCell>Email</TableCell>
               <TableCell>Rol</TableCell>
+              <TableCell>Local</TableCell>
               <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
@@ -63,6 +86,7 @@ export default function ListaUsuarios() {
               <TableRow key={u._id}>
                 <TableCell>{u.email}</TableCell>
                 <TableCell>{u.rol}</TableCell>
+                <TableCell>{u.local?.nombre || 'Sin asignar'}</TableCell>
                 <TableCell>
                   <IconButton color="primary" onClick={() => handleAbrirEdicion(u)}>
                     <EditIcon />
@@ -104,6 +128,25 @@ export default function ListaUsuarios() {
           >
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="cajero">Cajero</MenuItem>
+          </TextField>
+          <TextField
+            select
+            label="Local"
+            name="local"
+            fullWidth
+            value={editData.local}
+            onChange={handleChange}
+            sx={{ mb: 2 }}
+            disabled={usuario?.rol !== 'superadmin' || locales.length === 0}
+          >
+            <MenuItem value="">
+              {locales.length === 0 ? 'No hay locales disponibles' : 'Sin asignar'}
+            </MenuItem>
+            {locales.map((local) => (
+              <MenuItem key={local._id} value={local._id}>
+                {local.nombre}
+              </MenuItem>
+            ))}
           </TextField>
           <TextField
             label="Nueva Contraseña"
