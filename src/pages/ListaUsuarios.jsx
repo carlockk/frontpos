@@ -54,7 +54,17 @@ export default function ListaUsuarios() {
   };
 
   const handleGuardarCambios = async () => {
-    await editarUsuario(usuarioEditando._id, editData);
+    const payload = {
+      rol: editData.rol
+    };
+    if (usuario?.rol === 'superadmin') {
+      payload.local = editData.local === '' ? null : editData.local;
+    }
+    if (editData.password && editData.password.trim()) {
+      payload.password = editData.password;
+    }
+
+    await editarUsuario(usuarioEditando._id, payload);
     setOpen(false);
     await cargarUsuarios();
   };
