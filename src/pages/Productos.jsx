@@ -43,7 +43,7 @@ import { useAuth } from '../context/AuthContext';
 const BASE_URL = FILES_BASE;
 
 export default function Productos() {
-  const { usuario } = useAuth();
+  const { usuario, selectedLocal } = useAuth();
   const puedeEliminar = usuario?.rol !== 'cajero';
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -101,7 +101,7 @@ export default function Productos() {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [selectedLocal?._id]);
 
   const ordenarProductosPorCategoria = (prods, cats) => {
     const ordenIds = cats.map((c) => c._id);

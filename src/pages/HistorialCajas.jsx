@@ -2,14 +2,16 @@ import { useEffect, useState } from 'react';
 import { Box, Typography, Divider, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { obtenerHistorialCaja } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function HistorialCajas() {
+  const { selectedLocal } = useAuth();
   const [cajas, setCajas] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     obtenerHistorialCaja().then(res => setCajas(res.data)).catch(() => {});
-  }, []);
+  }, [selectedLocal?._id]);
 
   const handleImprimir = (caja) => {
     const resumen = {

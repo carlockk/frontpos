@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function ListaUsuarios() {
-  const { usuario } = useAuth();
+  const { usuario, selectedLocal } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [locales, setLocales] = useState([]);
   const [open, setOpen] = useState(false);
@@ -64,9 +64,13 @@ export default function ListaUsuarios() {
   };
 
   useEffect(() => {
+    if (usuario?.rol === 'superadmin' && !selectedLocal?._id) {
+      setUsuarios([]);
+      return;
+    }
     cargarUsuarios();
     cargarLocales();
-  }, []);
+  }, [usuario?.rol, selectedLocal?._id]);
 
   return (
     <Box sx={{ mt: 4 }}>

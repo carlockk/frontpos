@@ -10,12 +10,14 @@ import {
 } from 'recharts';
 import DatePicker from 'react-multi-date-picker';
 import { obtenerResumenPorRango } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const COLORS = ['#1976d2', '#2e7d32', '#f57c00', '#9c27b0', '#d32f2f'];
 
 export default function Dashboard() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { selectedLocal } = useAuth();
 
   const [rangoFechas, setRangoFechas] = useState([]);
   const [resumen, setResumen] = useState(null);
@@ -36,7 +38,7 @@ export default function Dashboard() {
     };
 
     cargarResumen();
-  }, [rangoFechas]);
+  }, [rangoFechas, selectedLocal?._id]);
 
   const pieChartData = resumen
     ? Object.entries(resumen.porTipoPago).map(([tipo, valor]) => ({

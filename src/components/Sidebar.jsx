@@ -132,7 +132,9 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   {usuario?.rol === 'superadmin' && (
     <Box sx={{ mt: 2 }}>
       <FormControl fullWidth size="small">
-        <InputLabel id="locales-select-label">Local activo</InputLabel>
+        <InputLabel id="locales-select-label" sx={{ color: '#e5e7eb' }}>
+          Local activo
+        </InputLabel>
         <Select
           labelId="locales-select-label"
           label="Local activo"
@@ -142,12 +144,27 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             seleccionarLocal(local || null);
           }}
           disabled={localesLoading || locales.length === 0}
+          sx={{
+            color: '#fff',
+            '.MuiOutlinedInput-notchedOutline': { borderColor: '#374151' },
+            '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#4b5563' },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#93c5fd' },
+            '.MuiSvgIcon-root': { color: '#e5e7eb' },
+          }}
+          MenuProps={{
+            PaperProps: {
+              sx: {
+                bgcolor: '#111827',
+                color: '#fff',
+              },
+            },
+          }}
         >
-          <MenuItem value="">
+          <MenuItem value="" sx={{ color: '#e5e7eb' }}>
             {localesLoading ? 'Cargando...' : 'Selecciona un local'}
           </MenuItem>
           {locales.map((local) => (
-            <MenuItem key={local._id} value={local._id}>
+            <MenuItem key={local._id} value={local._id} sx={{ color: '#fff' }}>
               {local.nombre}
             </MenuItem>
           ))}

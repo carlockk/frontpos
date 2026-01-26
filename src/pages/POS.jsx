@@ -26,6 +26,7 @@ import CarritoDrawer from '../components/CarritoDrawer';
 import { obtenerProductos, obtenerCategorias, FILES_BASE } from '../services/api';
 import { useCarrito } from '../context/CarritoContext';
 import { useCaja } from '../context/CajaContext';
+import { useAuth } from '../context/AuthContext';
 
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import ShoppingCartIcon from '@mui/icons-material/PointOfSale';
@@ -42,6 +43,7 @@ const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://loca
 const MIN_STOCK_ALERT = 3;
 
 export default function POS() {
+  const { selectedLocal } = useAuth();
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [filtroCategoria, setFiltroCategoria] = useState('');
@@ -80,7 +82,8 @@ export default function POS() {
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const userKey = user?.id || user?._id || 'anonimo';
+  const userId = user?.id || user?._id || 'anonimo';
+  const userKey = `${userId}_${selectedLocal?._id || 'sin-local'}`;
 
   const [productosOrdenados, setProductosOrdenados] = useState([]);
 
@@ -159,7 +162,7 @@ export default function POS() {
 
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
-  }, []);
+  }, [selectedLocal?._id]);
 
   const handleAgregar = (producto) => {
     if (tieneVariantes(producto)) {

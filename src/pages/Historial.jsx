@@ -4,8 +4,10 @@ import {
 } from '@mui/material';
 import { obtenerVentas } from '../services/api';
 import VistaTicket from '../components/VistaTicket';
+import { useAuth } from '../context/AuthContext';
 
 export default function Historial() {
+  const { selectedLocal } = useAuth();
   const [ventas, setVentas] = useState([]);
   const [filtradas, setFiltradas] = useState([]);
   const [busqueda, setBusqueda] = useState('');
@@ -19,7 +21,7 @@ export default function Historial() {
     } catch {
       alert('❌ Error al cargar historial');
     }
-  }, []);
+  }, [selectedLocal?._id]);
 
   useEffect(() => {
     cargar();

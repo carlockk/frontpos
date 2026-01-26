@@ -10,8 +10,10 @@ import {
 import { obtenerTicketsAbiertos, eliminarTicket } from '../services/api';
 import { useCarrito } from '../context/CarritoContext';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function TicketsAbiertos() {
+  const { selectedLocal } = useAuth();
   const [tickets, setTickets] = useState([]);
   const { cargarCarrito } = useCarrito();
   const navigate = useNavigate();
@@ -38,7 +40,7 @@ export default function TicketsAbiertos() {
 
   useEffect(() => {
     cargarTickets();
-  }, []);
+  }, [selectedLocal?._id]);
 
   return (
     <Box sx={{ p: 3 }}>

@@ -36,7 +36,7 @@ import {
 const emptyForm = { nombre: '', descripcion: '' };
 
 export default function Categorias() {
-  const { usuario } = useAuth();
+  const { usuario, selectedLocal } = useAuth();
   const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
 
   const [categorias, setCategorias] = useState([]);
@@ -67,7 +67,7 @@ export default function Categorias() {
 
   useEffect(() => {
     fetchCategorias();
-  }, []);
+  }, [selectedLocal?._id]);
 
   const openCreate = () => {
     setForm(emptyForm);

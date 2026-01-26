@@ -15,8 +15,10 @@ import {
 } from '@mui/material';
 import VariantesForm from './VariantesForm';
 import { crearProducto, obtenerCategorias } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function ProductoForm({ onSuccess, onCancel }) {
+  const { usuario, selectedLocal } = useAuth();
   const [form, setForm] = useState({
     nombre: '',
     precio: '',
@@ -72,7 +74,6 @@ export default function ProductoForm({ onSuccess, onCancel }) {
       setCargando(false);
       return;
     }
-
     if (controlarStock && !usaVariantes && form.stock && parseInt(form.stock, 10) < 0) {
       setError('El stock no puede ser negativo.');
       setCargando(false);
@@ -122,6 +123,12 @@ export default function ProductoForm({ onSuccess, onCancel }) {
       <Stack spacing={2}>
         {error && <Alert severity="error">{error}</Alert>}
         {exito && <Alert severity="success">{exito}</Alert>}
+
+        {usuario?.rol === 'superadmin' && (
+          <Typography variant="body2" color="text.secondary">
+            Local activo: {selectedLocal?.nombre || 'Sin seleccionar'}
+          </Typography>
+        )}
 
         <TextField
           label="Nombre"
