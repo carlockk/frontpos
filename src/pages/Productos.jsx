@@ -155,14 +155,27 @@ export default function Productos() {
   }, [selectedLocal?._id]);
 
   const ordenarProductosPorCategoria = (prods, cats) => {
+    if (!Array.isArray(cats) || cats.length === 0) {
+      return [...prods];
+    }
+
     const ordenIds = cats.map((c) => c._id);
     const ordenados = [];
+    const usados = new Set();
 
     ordenIds.forEach((catId) => {
       prods
         .filter((p) => p.categoria?._id === catId)
-        .forEach((p) => ordenados.push(p));
+        .forEach((p) => {
+          ordenados.push(p);
+          usados.add(p._id);
+        });
     });
+
+    // Agrega productos sin categoria o con categoria no encontrada
+    prods
+      .filter((p) => !usados.has(p._id))
+      .forEach((p) => ordenados.push(p));
 
     return ordenados;
   };

@@ -134,14 +134,25 @@ export default function POS() {
   };
 
   const ordenarProductosPorCategorias = (prods, cats) => {
+    if (!Array.isArray(cats) || cats.length === 0) {
+      return [...prods];
+    }
     const orden = cats.map((cat) => cat._id);
     const ordenados = [];
+    const usados = new Set();
 
     orden.forEach((catId) => {
       prods
         .filter((p) => p.categoria?._id === catId)
-        .forEach((p) => ordenados.push(p));
+        .forEach((p) => {
+          ordenados.push(p);
+          usados.add(p._id);
+        });
     });
+
+    prods
+      .filter((p) => !usados.has(p._id))
+      .forEach((p) => ordenados.push(p));
 
     return ordenados;
   };
