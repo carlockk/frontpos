@@ -14,13 +14,18 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
+  DialogContentText,
   Button,
   Snackbar,
   Alert,
   Pagination,
   Stack,
   Chip,
-  Collapse
+  Collapse,
+  List,
+  ListItem,
+  ListItemText,
+  MenuItem
 } from '@mui/material';
 
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -32,12 +37,16 @@ import {
   obtenerProductos,
   eliminarProducto,
   obtenerCategorias,
+  obtenerProductosBase,
+  crearProductoBase,
+  usarProductoBaseEnLocal,
   FILES_BASE,
 } from '../services/api';
 
 import ModalEditarProducto from '../components/ModalEditarProducto';
 import BuscadorProducto from '../components/BuscadorProducto';
 import ProductoForm from '../components/ProductoForm';
+import VariantesForm from '../components/VariantesForm';
 import { useAuth } from '../context/AuthContext';
 
 const BASE_URL = FILES_BASE;
@@ -74,6 +83,25 @@ export default function Productos() {
   const [detalleAbierto, setDetalleAbierto] = useState(null);
   const [productoStockModal, setProductoStockModal] = useState(null);
   const [openCrear, setOpenCrear] = useState(false);
+  const [openBase, setOpenBase] = useState(false);
+  const [openBaseCreate, setOpenBaseCreate] = useState(false);
+  const [openBaseUse, setOpenBaseUse] = useState(false);
+  const [bases, setBases] = useState([]);
+  const [baseSeleccionada, setBaseSeleccionada] = useState(null);
+  const [baseUseForm, setBaseUseForm] = useState({
+    precio: '',
+    controlarStock: true,
+    stock: ''
+  });
+  const [baseUseVariantes, setBaseUseVariantes] = useState([]);
+  const [baseForm, setBaseForm] = useState({
+    nombre: '',
+    descripcion: '',
+    categoria: ''
+  });
+  const [baseImagen, setBaseImagen] = useState(null);
+  const [baseVariantes, setBaseVariantes] = useState([]);
+  const [baseError, setBaseError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [imagenAmpliada, setImagenAmpliada] = useState(null);
 
@@ -174,6 +202,88 @@ export default function Productos() {
     setMensaje('Producto creado correctamente');
   };
 
+  const handleAbrirBases = async () => {
+    try {
+      const res = await obtenerProductosBase();
+      setBases(res.data || []);
+      setOpenBase(true);
+    } catch (err) {
+      alert('No se pudo cargar el catalogo base');
+    }
+  };
+
+  const handleUsarBase = async (base) => {
+    setBaseSeleccionada(base);
+    setBaseUseForm({ precio: '', controlarStock: true, stock: '' });
+    setBaseUseVariantes([]);
+    setOpenBaseUse(true);
+  };
+
+  const confirmarUsarBase = async () => {
+    if (!baseSeleccionada) return;
+    const precioNum = Number(baseUseForm.precio);
+    if (Number.isNaN(precioNum)) {
+      alert('Precio invalido');
+      return;
+    }
+
+    const payload = {
+      precio: precioNum,
+      controlarStock: String(baseUseForm.controlarStock)
+    };
+
+    if (baseUseForm.controlarStock) {
+      if (baseUseVariantes.length > 0) {
+        payload.variantes = baseUseVariantes;
+      } else if (baseUseForm.stock !== '') {
+        payload.stock = baseUseForm.stock;
+      }
+    }
+
+    try {
+      await usarProductoBaseEnLocal(baseSeleccionada._id, payload);
+      setOpenBaseUse(false);
+      setOpenBase(false);
+      setMensaje('Producto agregado desde catalogo base');
+      cargarDatos();
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo agregar el producto');
+    }
+  };
+
+  const resetBaseForm = () => {
+    setBaseForm({ nombre: '', descripcion: '', categoria: '' });
+    setBaseImagen(null);
+    setBaseVariantes([]);
+    setBaseError('');
+  };
+
+  const handleCrearBase = async () => {
+    if (!baseForm.nombre.trim()) {
+      setBaseError('El nombre es obligatorio');
+      return;
+    }
+    try {
+      const data = new FormData();
+      data.append('nombre', baseForm.nombre.trim());
+      data.append('descripcion', baseForm.descripcion.trim());
+      data.append('categoria', baseForm.categoria || '');
+      if (baseImagen) {
+        data.append('imagen', baseImagen);
+      }
+      if (baseVariantes.length > 0) {
+        data.append('variantes', JSON.stringify(baseVariantes));
+      }
+      await crearProductoBase(data);
+      resetBaseForm();
+      setOpenBaseCreate(false);
+      handleAbrirBases();
+      setMensaje('Producto base creado');
+    } catch (err) {
+      setBaseError(err?.response?.data?.error || 'No se pudo crear el producto base');
+    }
+  };
+
   const handleCerrarMensaje = () => setMensaje('');
 
   const obtenerImagenUrl = (prod) => {
@@ -235,9 +345,14 @@ export default function Productos() {
         <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
           Gestion de Productos
         </Typography>
-        <Button variant="contained" onClick={() => setOpenCrear(true)}>
-          Crear nuevo producto
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={handleAbrirBases}>
+            Usar del catalogo
+          </Button>
+          <Button variant="contained" onClick={() => setOpenCrear(true)}>
+            Crear nuevo producto
+          </Button>
+        </Stack>
       </Box>
 
       {/* Filtros y buscador */}
@@ -489,6 +604,161 @@ export default function Productos() {
             onCancel={() => setOpenCrear(false)}
           />
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={openBase} onClose={() => setOpenBase(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Catalogo Base</DialogTitle>
+        <DialogContent dividers>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+            <Button size="small" onClick={() => setOpenBaseCreate(true)}>
+              Crear producto base
+            </Button>
+          </Stack>
+          {bases.length === 0 ? (
+            <DialogContentText>No hay productos base aun.</DialogContentText>
+          ) : (
+            <List dense>
+              {bases.map((base) => (
+                <ListItem
+                  key={base._id}
+                  secondaryAction={
+                    <Button size="small" onClick={() => handleUsarBase(base)}>
+                      Usar en este local
+                    </Button>
+                  }
+                >
+                  <ListItemText
+                    primary={base.nombre}
+                    secondary={base.descripcion || 'Sin descripcion'}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenBase(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openBaseCreate} onClose={() => setOpenBaseCreate(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Crear Producto Base</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {baseError && <Alert severity="error">{baseError}</Alert>}
+            <TextField
+              label="Nombre"
+              value={baseForm.nombre}
+              onChange={(e) => setBaseForm((prev) => ({ ...prev, nombre: e.target.value }))}
+              autoFocus
+              required
+            />
+            <TextField
+              label="Descripcion"
+              value={baseForm.descripcion}
+              onChange={(e) => setBaseForm((prev) => ({ ...prev, descripcion: e.target.value }))}
+              multiline
+              minRows={2}
+            />
+            <TextField
+              select
+              label="Categoria"
+              value={baseForm.categoria}
+              onChange={(e) => setBaseForm((prev) => ({ ...prev, categoria: e.target.value }))}
+            >
+              <MenuItem value="">Sin categoria</MenuItem>
+              {categorias.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.label || cat.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button variant="outlined" component="label">
+              Seleccionar imagen (opcional)
+              <input
+                hidden
+                accept="image/*"
+                type="file"
+                onChange={(e) => setBaseImagen(e.target.files?.[0] || null)}
+              />
+            </Button>
+            {baseImagen && (
+              <DialogContentText>Imagen: {baseImagen.name}</DialogContentText>
+            )}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Variantes (opcional)
+              </Typography>
+              <VariantesForm variantes={baseVariantes} onChange={setBaseVariantes} />
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              resetBaseForm();
+              setOpenBaseCreate(false);
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button variant="contained" onClick={handleCrearBase}>
+            Crear base
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openBaseUse} onClose={() => setOpenBaseUse(false)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          Usar en este local
+          {baseSeleccionada ? ` - ${baseSeleccionada.nombre}` : ''}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Precio"
+              type="number"
+              value={baseUseForm.precio}
+              onChange={(e) => setBaseUseForm((prev) => ({ ...prev, precio: e.target.value }))}
+              required
+            />
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="body2">Controlar stock</Typography>
+              <Button
+                size="small"
+                variant={baseUseForm.controlarStock ? 'contained' : 'outlined'}
+                onClick={() =>
+                  setBaseUseForm((prev) => ({ ...prev, controlarStock: !prev.controlarStock }))
+                }
+              >
+                {baseUseForm.controlarStock ? 'Si' : 'No'}
+              </Button>
+            </Stack>
+
+            {baseUseForm.controlarStock && (
+              <>
+                <TextField
+                  label="Stock base (opcional si no hay variantes)"
+                  type="number"
+                  value={baseUseForm.stock}
+                  onChange={(e) => setBaseUseForm((prev) => ({ ...prev, stock: e.target.value }))}
+                />
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Variantes (opcional)
+                  </Typography>
+                  <VariantesForm variantes={baseUseVariantes} onChange={setBaseUseVariantes} />
+                </Box>
+              </>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenBaseUse(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={confirmarUsarBase}>
+            Agregar
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* Modal de confirmación de eliminación */}

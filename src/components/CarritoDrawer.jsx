@@ -39,6 +39,7 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
     }
     const productos_limpios = carrito.map(p => ({
       productoId: p._id,
+      productoBaseId: p.productoBaseId || null,
       nombre: p.nombre,
       precio_unitario: p.precio,
       cantidad: p.cantidad,
@@ -91,6 +92,7 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
 
     const productos_limpios = carrito.map(p => ({
       productoId: p._id,
+      productoBaseId: p.productoBaseId || null,
       nombre: p.nombre,
       precio_unitario: p.precio,
       cantidad: p.cantidad,

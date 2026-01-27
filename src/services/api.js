@@ -57,11 +57,18 @@ API.interceptors.request.use((config) => {
 // 🛍️ Productos
 // ─────────────────────────────────────────────
 export const obtenerProductos = () => API.get('/productos');
+export const obtenerProductosBase = () => API.get('/productos/base');
 
 export const crearProducto = (data) =>
   API.post('/productos', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
+export const crearProductoBase = (data) =>
+  API.post('/productos/base', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+export const usarProductoBaseEnLocal = (baseId, data) =>
+  API.post(`/productos/local/use-base/${baseId}`, data);
 
 export const eliminarProducto = (id) => API.delete(`/productos/${id}`);
 
