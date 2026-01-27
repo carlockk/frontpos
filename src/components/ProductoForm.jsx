@@ -217,7 +217,7 @@ export default function ProductoForm({ onSuccess, onCancel }) {
           >
             {categorias.map((cat) => (
               <MenuItem key={cat._id} value={cat._id}>
-                {cat.nombre}
+                {cat.label || cat.nombre}
               </MenuItem>
             ))}
           </Select>

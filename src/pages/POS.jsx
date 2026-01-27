@@ -42,6 +42,27 @@ import SelectorVariantes from '../components/SelectorVariantes';
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
 const MIN_STOCK_ALERT = 3;
 
+const buildCategoryLabelMap = (items) => {
+  const byId = new Map(items.map((cat) => [cat._id, cat]));
+  const cache = new Map();
+
+  const buildLabel = (cat, stack = new Set()) => {
+    if (!cat) return '';
+    if (cache.has(cat._id)) return cache.get(cat._id);
+    if (stack.has(cat._id)) return cat.nombre || '';
+    stack.add(cat._id);
+    const parent = cat.parent ? byId.get(cat.parent) : null;
+    const label = parent ? `${buildLabel(parent, stack)} / ${cat.nombre}` : cat.nombre || '';
+    cache.set(cat._id, label);
+    return label;
+  };
+
+  return items.map((cat) => ({
+    ...cat,
+    label: buildLabel(cat)
+  }));
+};
+
 export default function POS() {
   const { selectedLocal } = useAuth();
   const [productos, setProductos] = useState([]);
@@ -131,16 +152,17 @@ export default function POS() {
       obtenerCategorias()
     ]);
 
+    const categoriasConEtiqueta = buildCategoryLabelMap(resCat.data || []);
     const ordenGuardado = JSON.parse(
       localStorage.getItem(`ordenCategorias_${userKey}`)
     );
 
-    let categoriasOrdenadas = resCat.data;
+    let categoriasOrdenadas = categoriasConEtiqueta;
     if (ordenGuardado) {
       const ordenadas = ordenGuardado
-        .map((id) => resCat.data.find((c) => c._id === id))
+        .map((id) => categoriasConEtiqueta.find((c) => c._id === id))
         .filter(Boolean);
-      const faltantes = resCat.data.filter(
+      const faltantes = categoriasConEtiqueta.filter(
         (c) => !ordenGuardado.includes(c._id)
       );
       categoriasOrdenadas = [...ordenadas, ...faltantes];

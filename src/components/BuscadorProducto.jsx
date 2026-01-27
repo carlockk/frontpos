@@ -56,7 +56,7 @@ export default function BuscadorProducto({
         <MenuItem value="">Todas</MenuItem>
         {categorias.map((cat) => (
           <MenuItem key={cat._id} value={cat._id}>
-            {cat.nombre}
+            {cat.label || cat.nombre}
           </MenuItem>
         ))}
       </TextField>

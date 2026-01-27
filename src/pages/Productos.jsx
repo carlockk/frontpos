@@ -42,6 +42,27 @@ import { useAuth } from '../context/AuthContext';
 
 const BASE_URL = FILES_BASE;
 
+const buildCategoryLabelMap = (items) => {
+  const byId = new Map(items.map((cat) => [cat._id, cat]));
+  const cache = new Map();
+
+  const buildLabel = (cat, stack = new Set()) => {
+    if (!cat) return '';
+    if (cache.has(cat._id)) return cache.get(cat._id);
+    if (stack.has(cat._id)) return cat.nombre || '';
+    stack.add(cat._id);
+    const parent = cat.parent ? byId.get(cat.parent) : null;
+    const label = parent ? `${buildLabel(parent, stack)} / ${cat.nombre}` : cat.nombre || '';
+    cache.set(cat._id, label);
+    return label;
+  };
+
+  return items.map((cat) => ({
+    ...cat,
+    label: buildLabel(cat)
+  }));
+};
+
 export default function Productos() {
   const { usuario, selectedLocal } = useAuth();
   const puedeEliminar = usuario?.rol !== 'cajero';
@@ -90,13 +111,14 @@ export default function Productos() {
       obtenerCategorias()
     ]);
 
+    const categoriasConEtiqueta = buildCategoryLabelMap(resCat.data || []);
     const productosOrdenados = ordenarProductosPorCategoria(
       resProd.data,
-      resCat.data
+      categoriasConEtiqueta
     );
 
     setProductos(productosOrdenados);
-    setCategorias(resCat.data);
+    setCategorias(categoriasConEtiqueta);
   };
 
   useEffect(() => {

@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -33,7 +34,28 @@ import {
   eliminarCategoria
 } from '../services/api';
 
-const emptyForm = { nombre: '', descripcion: '' };
+const emptyForm = { nombre: '', descripcion: '', parent: '' };
+
+const buildCategoryLabelMap = (items) => {
+  const byId = new Map(items.map((cat) => [cat._id, cat]));
+  const cache = new Map();
+
+  const buildLabel = (cat, stack = new Set()) => {
+    if (!cat) return '';
+    if (cache.has(cat._id)) return cache.get(cat._id);
+    if (stack.has(cat._id)) return cat.nombre || '';
+    stack.add(cat._id);
+    const parent = cat.parent ? byId.get(cat.parent) : null;
+    const label = parent ? `${buildLabel(parent, stack)} / ${cat.nombre}` : cat.nombre || '';
+    cache.set(cat._id, label);
+    return label;
+  };
+
+  return items.map((cat) => ({
+    ...cat,
+    label: buildLabel(cat)
+  }));
+};
 
 export default function Categorias() {
   const { usuario, selectedLocal } = useAuth();
@@ -57,7 +79,7 @@ export default function Categorias() {
     setError('');
     try {
       const res = await obtenerCategorias();
-      setCategorias(res.data || []);
+      setCategorias(buildCategoryLabelMap(res.data || []));
     } catch (err) {
       setError('No se pudieron cargar las categorias.');
     } finally {
@@ -80,7 +102,8 @@ export default function Categorias() {
   const openEdit = (cat) => {
     setForm({
       nombre: cat.nombre || '',
-      descripcion: cat.descripcion || ''
+      descripcion: cat.descripcion || '',
+      parent: cat.parent || ''
     });
     setEditingId(cat._id);
     setDialogOpen(true);
@@ -99,7 +122,8 @@ export default function Categorias() {
 
     const payload = {
       nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim()
+      descripcion: form.descripcion.trim(),
+      parent: form.parent || null
     };
 
     try {
@@ -198,22 +222,28 @@ export default function Categorias() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Nombre</TableCell>
-                  <TableCell>Descripcion</TableCell>
-                  {isAdmin && <TableCell align="right">Acciones</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {categorias.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={isAdmin ? 3 : 2} align="center">
+                <TableCell>Nombre</TableCell>
+                <TableCell>Categoria padre</TableCell>
+                <TableCell>Descripcion</TableCell>
+                {isAdmin && <TableCell align="right">Acciones</TableCell>}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {categorias.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={isAdmin ? 4 : 3} align="center">
                       No hay categorias registradas.
                     </TableCell>
-                  </TableRow>
-                )}
-                {categorias.map((cat) => (
-                  <TableRow key={cat._id}>
-                    <TableCell>{cat.nombre || '-'}</TableCell>
+                </TableRow>
+              )}
+              {categorias.map((cat) => (
+                <TableRow key={cat._id}>
+                    <TableCell>{cat.label || cat.nombre || '-'}</TableCell>
+                    <TableCell>
+                      {cat.parent
+                        ? categorias.find((c) => c._id === cat.parent)?.label || '-'
+                        : '-'}
+                    </TableCell>
                     <TableCell>{cat.descripcion || '-'}</TableCell>
                     {isAdmin && (
                       <TableCell align="right">
@@ -250,6 +280,23 @@ export default function Categorias() {
               autoFocus
               required
             />
+            <TextField
+              select
+              label="Categoria padre (opcional)"
+              value={form.parent}
+              onChange={(e) => setForm((prev) => ({ ...prev, parent: e.target.value }))}
+            >
+              <MenuItem value="">
+                Sin categoria padre
+              </MenuItem>
+              {categorias
+                .filter((cat) => cat._id !== editingId)
+                .map((cat) => (
+                  <MenuItem key={cat._id} value={cat._id}>
+                    {cat.label || cat.nombre}
+                  </MenuItem>
+                ))}
+            </TextField>
             <TextField
               label="Descripcion"
               value={form.descripcion}
