@@ -254,21 +254,12 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             </Collapse>
 
             {/* Usuarios */}
-            <ListItemButton onClick={() => toggleMenu('usuarios')} sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-              <Box sx={{ mr: 2 }}><PeopleAltIcon /></Box>
-              <ListItemText primary="Usuarios" />
-              {openMenus.usuarios ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
-            <Collapse in={openMenus.usuarios} timeout="auto" unmountOnExit>
-              <List component="div" disablePadding>
-                <ListItemButton component={Link} to="/usuarios" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-                  <ListItemText primary="Ver Usuarios" />
-                </ListItemButton>
-                <ListItemButton component={Link} to="/crear-usuario" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-                  <ListItemText primary="Crear Usuario" />
-                </ListItemButton>
-              </List>
-            </Collapse>
+            <ListItem disablePadding>
+              <ListItemButton component={Link} to="/usuarios" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+                <Box sx={{ mr: 2 }}><PeopleAltIcon /></Box>
+                <ListItemText primary="Usuarios" />
+              </ListItemButton>
+            </ListItem>
           </>
         )}
       </List>

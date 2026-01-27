@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableHead, TableRow,
   TableCell, TableBody, IconButton, Paper, Modal,
-  TextField, Button, MenuItem
+  TextField, Button, MenuItem, Stack, Alert
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,7 +10,8 @@ import {
   obtenerUsuarios,
   eliminarUsuario,
   editarUsuario,
-  obtenerLocales
+  obtenerLocales,
+  crearUsuario
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,6 +22,15 @@ export default function ListaUsuarios() {
   const [open, setOpen] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [editData, setEditData] = useState({ rol: '', password: '', local: '' });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createData, setCreateData] = useState({
+    nombre: '',
+    email: '',
+    password: '',
+    rol: 'cajero',
+    local: ''
+  });
+  const [createError, setCreateError] = useState('');
 
   const cargarUsuarios = async () => {
     const res = await obtenerUsuarios();
@@ -73,6 +83,48 @@ export default function ListaUsuarios() {
     setEditData({ ...editData, [e.target.name]: e.target.value });
   };
 
+  const handleOpenCreate = () => {
+    setCreateData({
+      nombre: '',
+      email: '',
+      password: '',
+      rol: 'cajero',
+      local: ''
+    });
+    setCreateError('');
+    setCreateOpen(true);
+  };
+
+  const handleCreateChange = (e) => {
+    setCreateData({ ...createData, [e.target.name]: e.target.value });
+  };
+
+  const handleCreate = async () => {
+    setCreateError('');
+    if (!createData.nombre.trim() || !createData.email.trim() || !createData.password) {
+      setCreateError('Nombre, email y contraseña son obligatorios.');
+      return;
+    }
+    if (usuario?.rol === 'superadmin' && !createData.local) {
+      setCreateError('Selecciona un local para el usuario.');
+      return;
+    }
+    try {
+      await crearUsuario({
+        nombre: createData.nombre.trim(),
+        email: createData.email.trim(),
+        password: createData.password,
+        rol: createData.rol,
+        local: usuario?.rol === 'superadmin' ? createData.local : undefined
+      });
+      setCreateOpen(false);
+      cargarUsuarios();
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'No se pudo crear el usuario.';
+      setCreateError(msg);
+    }
+  };
+
   useEffect(() => {
     if (usuario?.rol === 'superadmin' && !selectedLocal?._id) {
       setUsuarios([]);
@@ -84,7 +136,12 @@ export default function ListaUsuarios() {
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Typography variant="h5" gutterBottom>📋 Lista de Usuarios</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Typography variant="h5">📋 Lista de Usuarios</Typography>
+        <Button variant="contained" onClick={handleOpenCreate}>
+          Crear nuevo usuario
+        </Button>
+      </Stack>
       <Paper sx={{ overflowX: 'auto' }}>
         <Table>
           <TableHead>
@@ -174,6 +231,81 @@ export default function ListaUsuarios() {
           <Button variant="contained" fullWidth onClick={handleGuardarCambios}>
             Guardar Cambios
           </Button>
+        </Box>
+      </Modal>
+
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)}>
+        <Box sx={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          bgcolor: 'background.paper', p: 4, borderRadius: 2, width: 360
+        }}>
+          <Typography variant="h6" gutterBottom>➕ Crear Usuario</Typography>
+          {createError && <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>}
+          <TextField
+            label="Nombre"
+            name="nombre"
+            fullWidth
+            value={createData.nombre}
+            onChange={handleCreateChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            fullWidth
+            value={createData.email}
+            onChange={handleCreateChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Contraseña"
+            name="password"
+            type="password"
+            fullWidth
+            value={createData.password}
+            onChange={handleCreateChange}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            select
+            label="Rol"
+            name="rol"
+            fullWidth
+            value={createData.rol}
+            onChange={handleCreateChange}
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="admin">Admin</MenuItem>
+            <MenuItem value="cajero">Cajero</MenuItem>
+          </TextField>
+          {usuario?.rol === 'superadmin' && (
+            <TextField
+              select
+              label="Local"
+              name="local"
+              fullWidth
+              value={createData.local}
+              onChange={handleCreateChange}
+              sx={{ mb: 2 }}
+            >
+              <MenuItem value="">
+                {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
+              </MenuItem>
+              {locales.map((local) => (
+                <MenuItem key={local._id} value={local._id}>
+                  {local.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
+            <Button onClick={() => setCreateOpen(false)}>Cancelar</Button>
+            <Button variant="contained" onClick={handleCreate}>
+              Crear
+            </Button>
+          </Stack>
         </Box>
       </Modal>
     </Box>
