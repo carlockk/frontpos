@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 
 import { useTheme } from '@mui/material/styles';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -46,6 +46,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   const { usuario, logout, selectedLocal, seleccionarLocal } = useAuth();
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { modoOscuro, toggleTema } = useThemeMode();
   const { cajaAbierta } = useCaja(); // ✅ Estado dinámico de caja
@@ -234,7 +235,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
 
 
         {/* Solo admin */}
-        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin' || usuario?.rol === 'cajero') && (
           <>
             {/* Caja */}
             <ListItemButton onClick={() => toggleMenu('caja')} sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
@@ -247,9 +248,11 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
                 <ListItemButton component={Link} to="/caja" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
                   <ListItemText primary={cajaAbierta ? 'Cerrar Caja' : 'Abrir Caja'} />
                 </ListItemButton>
-                <ListItemButton component={Link} to="/historial-cajas" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
-                  <ListItemText primary="Historial de Cajas" />
-                </ListItemButton>
+                {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+                  <ListItemButton component={Link} to="/historial-cajas" sx={{ pl: 5, py: 1, color: '#d1d5db' }}>
+                    <ListItemText primary="Historial de Cajas" />
+                  </ListItemButton>
+                )}
               </List>
             </Collapse>
 
@@ -283,7 +286,10 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             color="error"
             variant="outlined"
             startIcon={<LogoutIcon />}
-            onClick={logout}
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
             sx={{
               color: '#f87171',
               borderColor: '#f87171',

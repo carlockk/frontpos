@@ -99,7 +99,7 @@ export default function App() {
             <Route path="/historial" element={usuario ? <Historial /> : <Navigate to="/login" />} />
             <Route
               path="/caja"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <Caja /> : <Navigate to="/" />}
+              element={usuario ? <Caja /> : <Navigate to="/login" />}
             />
             <Route
               path="/historial-cajas"

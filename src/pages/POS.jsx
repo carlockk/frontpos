@@ -583,7 +583,7 @@ export default function POS() {
                         letterSpacing: 0.5
                       }}
                     >
-                      Stock no controlado
+                      Stock libre
                     </Typography>
                   )}
                 </Box>
