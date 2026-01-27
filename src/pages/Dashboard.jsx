@@ -8,7 +8,7 @@ import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import DatePicker from 'react-multi-date-picker';
+import DatePicker, { DateObject } from 'react-multi-date-picker';
 import { obtenerResumenPorRango } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -21,6 +21,14 @@ export default function Dashboard() {
 
   const [rangoFechas, setRangoFechas] = useState([]);
   const [resumen, setResumen] = useState(null);
+  const [sinDatosHoy, setSinDatosHoy] = useState(false);
+
+  useEffect(() => {
+    if (rangoFechas.length === 0) {
+      const hoy = new DateObject();
+      setRangoFechas([hoy, hoy]);
+    }
+  }, []);
 
   useEffect(() => {
     const cargarResumen = async () => {
@@ -32,6 +40,9 @@ export default function Dashboard() {
 
         const res = await obtenerResumenPorRango(inicio, fin);
         setResumen(res.data);
+        const hoy = new DateObject().format('YYYY-MM-DD');
+        const esHoy = inicio === hoy && fin === hoy;
+        setSinDatosHoy(esHoy && Number(res.data?.cantidad || 0) === 0);
       } catch (err) {
         console.error('Error al obtener resumen por rango:', err);
       }
@@ -269,7 +280,9 @@ export default function Dashboard() {
           </Card>
         </Box>
       ) : (
-        <Typography color="text.secondary">Selecciona un rango para ver el resumen.</Typography>
+        <Typography color="text.secondary">
+          {sinDatosHoy ? 'No hay datos en la fecha actual.' : 'Selecciona un rango para ver el resumen.'}
+        </Typography>
       )}
     </Box>
   );
