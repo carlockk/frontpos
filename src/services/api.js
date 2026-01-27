@@ -67,8 +67,10 @@ export const crearProductoBase = (data) =>
   API.post('/productos/base', data, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
-export const usarProductoBaseEnLocal = (baseId, data) =>
-  API.post(`/productos/local/use-base/${baseId}`, data);
+export const usarProductoBaseEnLocal = (baseId, data, localId) =>
+  API.post(`/productos/local/use-base/${baseId}`, data, {
+    ...(localId ? { headers: { 'x-local-id': localId } } : {}),
+  });
 
 export const eliminarProducto = (id) => API.delete(`/productos/${id}`);
 
@@ -115,10 +117,14 @@ export const obtenerHistorialCaja = () => API.get('/caja/historial');
 // ─────────────────────────────────────────────
 // 📁 Categorías
 // ─────────────────────────────────────────────
-export const obtenerCategorias = () => API.get('/categorias');
+export const obtenerCategorias = (localId) =>
+  API.get('/categorias', {
+    ...(localId ? { headers: { 'x-local-id': localId } } : {}),
+  });
 export const crearCategoria = (data) => API.post('/categorias', data);
 export const editarCategoria = (id, data) => API.put(`/categorias/${id}`, data);
 export const eliminarCategoria = (id) => API.delete(`/categorias/${id}`);
+export const clonarCategorias = (data) => API.post('/categorias/clonar', data);
 
 // ─────────────────────────────────────────────
 // 🧾 Tickets Abiertos

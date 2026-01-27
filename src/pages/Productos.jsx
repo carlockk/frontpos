@@ -41,6 +41,7 @@ import {
   obtenerProductosBase,
   crearProductoBase,
   usarProductoBaseEnLocal,
+  obtenerLocales,
   FILES_BASE,
 } from '../services/api';
 
@@ -76,6 +77,7 @@ const buildCategoryLabelMap = (items) => {
 export default function Productos() {
   const { usuario, selectedLocal } = useAuth();
   const puedeEliminar = usuario?.rol !== 'cajero';
+  const esSuperadmin = usuario?.rol === 'superadmin';
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
@@ -95,6 +97,8 @@ export default function Productos() {
     stock: ''
   });
   const [baseUseVariantes, setBaseUseVariantes] = useState([]);
+  const [locales, setLocales] = useState([]);
+  const [targetLocalId, setTargetLocalId] = useState('');
   const [baseForm, setBaseForm] = useState({
     nombre: '',
     descripcion: '',
@@ -153,6 +157,13 @@ export default function Productos() {
   useEffect(() => {
     cargarDatos();
   }, [selectedLocal?._id]);
+
+  useEffect(() => {
+    if (!esSuperadmin) return;
+    obtenerLocales()
+      .then((res) => setLocales(res.data || []))
+      .catch(() => setLocales([]));
+  }, [esSuperadmin]);
 
   const ordenarProductosPorCategoria = (prods, cats) => {
     if (!Array.isArray(cats) || cats.length === 0) {
@@ -230,6 +241,7 @@ export default function Productos() {
     setBaseSeleccionada(base);
     setBaseUseForm({ precio: '', controlarStock: true, stock: '' });
     setBaseUseVariantes([]);
+    setTargetLocalId('');
     setOpenBaseUse(true);
   };
 
@@ -238,6 +250,14 @@ export default function Productos() {
     const precioNum = Number(baseUseForm.precio);
     if (Number.isNaN(precioNum)) {
       alert('Precio invalido');
+      return;
+    }
+    if (esSuperadmin && !targetLocalId && selectedLocal?._id) {
+      // usa el local activo si no se eligio otro
+      setTargetLocalId(selectedLocal._id);
+    }
+    if (esSuperadmin && !targetLocalId && !selectedLocal?._id) {
+      alert('Selecciona un local destino');
       return;
     }
 
@@ -255,7 +275,11 @@ export default function Productos() {
     }
 
     try {
-      await usarProductoBaseEnLocal(baseSeleccionada._id, payload);
+      await usarProductoBaseEnLocal(
+        baseSeleccionada._id,
+        payload,
+        esSuperadmin ? (targetLocalId || selectedLocal?._id) : undefined
+      );
       setOpenBaseUse(false);
       setOpenBase(false);
       setMensaje('Producto agregado desde catalogo base');
@@ -263,6 +287,19 @@ export default function Productos() {
     } catch (err) {
       alert(err?.response?.data?.error || 'No se pudo agregar el producto');
     }
+  };
+
+  const handleUsarEnOtroLocal = (prod) => {
+    if (!prod?.productoBaseId) {
+      alert('Este producto no tiene base asociada.');
+      return;
+    }
+    const base = { _id: prod.productoBaseId, nombre: prod.nombre };
+    setBaseSeleccionada(base);
+    setBaseUseForm({ precio: String(prod.precio || ''), controlarStock: true, stock: '' });
+    setBaseUseVariantes([]);
+    setTargetLocalId('');
+    setOpenBaseUse(true);
   };
 
   const resetBaseForm = () => {
@@ -516,6 +553,15 @@ export default function Productos() {
                       >
                         <EditIcon />
                       </IconButton>
+                      {esSuperadmin && (
+                        <Button
+                          size="small"
+                          sx={{ ml: 1 }}
+                          onClick={() => handleUsarEnOtroLocal(prod)}
+                        >
+                          Usar en otro local
+                        </Button>
+                      )}
                       {puedeEliminar && (
                         <IconButton
                           color="error"
@@ -729,6 +775,24 @@ export default function Productos() {
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            {esSuperadmin && (
+              <TextField
+                select
+                label="Local destino"
+                value={targetLocalId}
+                onChange={(e) => setTargetLocalId(e.target.value)}
+                required
+              >
+                <MenuItem value="">
+                  {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
+                </MenuItem>
+                {locales.map((local) => (
+                  <MenuItem key={local._id} value={local._id}>
+                    {local.nombre}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               label="Precio"
               type="number"

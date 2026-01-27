@@ -13,6 +13,8 @@ import {
   MenuItem,
   Paper,
   Stack,
+  Switch,
+  FormControlLabel,
   Table,
   TableBody,
   TableCell,
@@ -31,7 +33,9 @@ import {
   obtenerCategorias,
   crearCategoria,
   editarCategoria,
-  eliminarCategoria
+  eliminarCategoria,
+  obtenerLocales,
+  clonarCategorias
 } from '../services/api';
 
 const emptyForm = { nombre: '', descripcion: '', parent: '' };
@@ -73,6 +77,13 @@ export default function Categorias() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [locales, setLocales] = useState([]);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneLocal, setCloneLocal] = useState('');
+  const [cloneCategorias, setCloneCategorias] = useState([]);
+  const [cloneCategoriaId, setCloneCategoriaId] = useState('');
+  const [cloneAll, setCloneAll] = useState(false);
+  const [cloneLoading, setCloneLoading] = useState(false);
 
   const fetchCategorias = async () => {
     setLoading(true);
@@ -87,8 +98,18 @@ export default function Categorias() {
     }
   };
 
+  const fetchLocales = async () => {
+    try {
+      const res = await obtenerLocales();
+      setLocales(res.data || []);
+    } catch (err) {
+      setLocales([]);
+    }
+  };
+
   useEffect(() => {
     fetchCategorias();
+    fetchLocales();
   }, [selectedLocal?._id]);
 
   const openCreate = () => {
@@ -180,6 +201,49 @@ export default function Categorias() {
     setDeleteTarget(null);
   };
 
+  const handleOpenClone = () => {
+    setCloneOpen(true);
+    setCloneLocal('');
+    setCloneCategorias([]);
+    setCloneCategoriaId('');
+    setCloneAll(false);
+    setError('');
+    setInfo('');
+  };
+
+  useEffect(() => {
+    if (!cloneLocal) {
+      setCloneCategorias([]);
+      return;
+    }
+    obtenerCategorias(cloneLocal)
+      .then((res) => setCloneCategorias(buildCategoryLabelMap(res.data || [])))
+      .catch(() => setCloneCategorias([]));
+  }, [cloneLocal]);
+
+  const handleClone = async () => {
+    if (!cloneLocal || (!cloneCategoriaId && !cloneAll)) {
+      setError('Selecciona el local y la categoria a clonar.');
+      return;
+    }
+    try {
+      setCloneLoading(true);
+      await clonarCategorias({
+        sourceLocalId: cloneLocal,
+        categoriaId: cloneAll ? null : cloneCategoriaId,
+        clonarTodas: cloneAll
+      });
+      setInfo('Categorias clonadas correctamente.');
+      setCloneOpen(false);
+      fetchCategorias();
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'No se pudo clonar la categoria.';
+      setError(msg);
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ mt: 4, px: 2 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -206,6 +270,11 @@ export default function Categorias() {
               onClick={openCreate}
             >
               Crear nueva categoria
+            </Button>
+          )}
+          {usuario?.rol === 'superadmin' && (
+            <Button variant="outlined" onClick={handleOpenClone}>
+              Clonar desde otro local
             </Button>
           )}
         </Stack>
@@ -334,6 +403,61 @@ export default function Categorias() {
             disabled={deleteLoading}
           >
             {deleteLoading ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Clonar categorias desde otro local</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              select
+              label="Local origen"
+              value={cloneLocal}
+              onChange={(e) => setCloneLocal(e.target.value)}
+            >
+              <MenuItem value="">
+                {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
+              </MenuItem>
+              {locales.map((local) => (
+                <MenuItem key={local._id} value={local._id}>
+                  {local.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Categoria a clonar (incluye subcategorias)"
+              value={cloneCategoriaId}
+              onChange={(e) => setCloneCategoriaId(e.target.value)}
+              disabled={!cloneLocal || cloneAll}
+            >
+              <MenuItem value="">
+                {cloneLocal ? 'Selecciona una categoria' : 'Selecciona un local primero'}
+              </MenuItem>
+              {cloneCategorias.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.label || cat.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={cloneAll}
+                  onChange={(e) => setCloneAll(e.target.checked)}
+                  disabled={!cloneLocal}
+                />
+              }
+              label="Clonar todas las categorias del local"
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloneOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleClone} disabled={cloneLoading}>
+            {cloneLoading ? 'Clonando...' : 'Clonar'}
           </Button>
         </DialogActions>
       </Dialog>
