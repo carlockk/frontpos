@@ -74,6 +74,7 @@ const estadoVencimiento = (lote, alertaDias) => {
 export default function Insumos() {
   const { usuario, selectedLocal } = useAuth();
   const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
+  const puedeEditar = isAdmin || usuario?.rol === 'cajero';
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -412,6 +413,11 @@ export default function Insumos() {
               </Button>
             </Stack>
           )}
+          {!isAdmin && (
+            <Button variant="outlined" onClick={openHistorial}>
+              Ver historial de E/S
+            </Button>
+          )}
         </Stack>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -433,7 +439,7 @@ export default function Insumos() {
             <TableBody>
               {insumos.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} align="center">
+                  <TableCell colSpan={7} align="center">
                     No hay insumos registrados.
                   </TableCell>
                 </TableRow>
@@ -466,13 +472,17 @@ export default function Insumos() {
                     </Button>
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" onClick={() => openEdit(insumo)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                    </TableCell>
+                    {puedeEditar && (
+                      <IconButton size="small" onClick={() => openEdit(insumo)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                    {isAdmin && (
+                      <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </TableCell>
                   </TableRow>
                 );
               })}

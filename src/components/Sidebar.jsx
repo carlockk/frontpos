@@ -195,7 +195,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         </ListItem>
 
         {/* Insumos */}
-        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+        {usuario && (
           <ListItem disablePadding>
             <ListItemButton component={Link} to="/insumos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
               <Box sx={{ mr: 2 }}><InventoryOutlinedIcon /></Box>
