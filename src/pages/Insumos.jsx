@@ -740,16 +740,25 @@ export default function Insumos() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={histOpen} onClose={() => setHistOpen(false)} fullScreen={isMobile} fullWidth maxWidth="md">
+      <Dialog
+        open={histOpen}
+        onClose={() => setHistOpen(false)}
+        fullScreen={isMobile}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          sx: !isMobile
+            ? { height: '90vh', display: 'flex', flexDirection: 'column' }
+            : {}
+        }}
+      >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           Historial de Entradas/Salidas
-          {isMobile && (
-            <IconButton onClick={() => setHistOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          )}
+          <IconButton onClick={() => setHistOpen(false)}>
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={!isMobile ? { flex: 1, overflow: 'auto' } : {}}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               select
@@ -796,6 +805,7 @@ export default function Insumos() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Fecha</TableCell>
+                    {histInsumoId === '' && <TableCell>Insumo</TableCell>}
                     <TableCell>Tipo</TableCell>
                     <TableCell>Cantidad</TableCell>
                     <TableCell>Motivo</TableCell>
@@ -805,6 +815,9 @@ export default function Insumos() {
                   {historialFiltrado.map((mov) => (
                     <TableRow key={mov._id}>
                       <TableCell>{new Date(mov.fecha).toLocaleString()}</TableCell>
+                      {histInsumoId === '' && (
+                        <TableCell>{mov.insumo?.nombre || '-'}</TableCell>
+                      )}
                       <TableCell>{mov.tipo}</TableCell>
                       <TableCell>{mov.cantidad}</TableCell>
                       <TableCell>{mov.motivo || '-'}</TableCell>
