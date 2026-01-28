@@ -1,8 +1,10 @@
 import { Box, Typography, Button } from '@mui/material';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { obtenerConfigRecibo } from '../services/api';
 
 export default function VistaTicket({ venta }) {
   const ticketRef = useRef();
+  const [config, setConfig] = useState(null);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -10,6 +12,18 @@ export default function VistaTicket({ venta }) {
     return () => {
       document.title = originalTitle;
     };
+  }, []);
+
+  useEffect(() => {
+    const cargarConfig = async () => {
+      try {
+        const res = await obtenerConfigRecibo();
+        setConfig(res.data);
+      } catch {
+        setConfig({ nombre: 'Ticket de Venta' });
+      }
+    };
+    cargarConfig();
   }, []);
 
   const handleImprimir = () => {
@@ -96,10 +110,17 @@ export default function VistaTicket({ venta }) {
         sx={{
           textAlign: 'center',
           px: 1,
-          py: 2
-        }}
-      >
-        <Typography className="bold" fontSize="1.2rem">🧾 Ticket de Venta</Typography>
+        py: 2
+      }}
+    >
+        {config?.logo_url && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+            <img src={config.logo_url} alt="Logo" style={{ maxWidth: 120, maxHeight: 80 }} />
+          </Box>
+        )}
+        <Typography className="bold" fontSize="1.2rem">
+          {config?.nombre || 'Ticket de Venta'}
+        </Typography>
         <Typography>N° Pedido: #{String(venta.numero_pedido).padStart(2, '0')}</Typography>
         <Typography fontSize="0.8rem">
           {new Date(venta.fecha).toLocaleString()}
@@ -136,6 +157,12 @@ export default function VistaTicket({ venta }) {
 
         <Typography>Pago: {venta.tipo_pago || '—'}</Typography>
         <Typography>Pedido: {venta.tipo_pedido || '—'}</Typography>
+
+        {config?.pie && (
+          <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+            {config.pie}
+          </Typography>
+        )}
       </Box>
 
       {/* 🔘 Botón fuera de la impresión */}

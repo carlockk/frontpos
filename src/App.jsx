@@ -25,6 +25,7 @@ import Login from './pages/Login';
 import TicketsAbiertos from './pages/TicketsAbiertos'; // ✅ NUEVO
 import Locales from './pages/Locales';
 import Insumos from './pages/Insumos';
+import ConfigRecibo from './pages/ConfigRecibo';
 
 const drawerWidth = 320;
 
@@ -111,6 +112,10 @@ export default function App() {
             <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} /> {/* ✅ NUEVO */}
             <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
             <Route path="/insumos" element={usuario ? <Insumos /> : <Navigate to="/login" />} />
+            <Route
+              path="/config-recibo"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <ConfigRecibo /> : <Navigate to="/" />}
+            />
           </Routes>
         </Box>
       </Box>

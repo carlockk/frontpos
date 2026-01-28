@@ -151,6 +151,15 @@ export const guardarConfigAlertasInsumos = (data) => API.put('/insumos/alertas/c
 export const enviarResumenAlertasInsumos = () => API.post('/insumos/alertas/resumen');
 
 // ─────────────────────────────────────────────
+// 🧾 Configuracion de recibos
+// ─────────────────────────────────────────────
+export const obtenerConfigRecibo = () => API.get('/recibo-config');
+export const guardarConfigRecibo = (data) =>
+  API.put('/recibo-config', data, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+
+// ─────────────────────────────────────────────
 // 🏬 Locales
 // ─────────────────────────────────────────────
 export const obtenerLocales = () => API.get('/locales');

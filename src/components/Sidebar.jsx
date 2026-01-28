@@ -35,6 +35,7 @@ import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import StoreIcon from '@mui/icons-material/StoreOutlined';
 import StorefrontIcon from '@mui/icons-material/StorefrontOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
@@ -241,6 +242,16 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             <ListItemButton component={Link} to="/locales" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
               <Box sx={{ mr: 2 }}><StorefrontIcon /></Box>
               <ListItemText primary="Locales" />
+            </ListItemButton>
+          </ListItem>
+        )}
+
+        {/* Configuracion recibos */}
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/config-recibo" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><ReceiptLongIcon /></Box>
+              <ListItemText primary="Configuracion de Recibos" />
             </ListItemButton>
           </ListItem>
         )}

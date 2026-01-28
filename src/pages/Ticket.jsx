@@ -1,11 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Typography, Button } from '@mui/material';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { obtenerConfigRecibo } from '../services/api';
 
 export default function Ticket() {
   const location = useLocation();
   const navigate = useNavigate();
   const { venta } = location.state || {};
+  const [config, setConfig] = useState(null);
+  const printedRef = useRef(false);
 
   useEffect(() => {
     const originalTitle = document.title;
@@ -14,6 +17,44 @@ export default function Ticket() {
       document.title = originalTitle;
     };
   }, []);
+
+  useEffect(() => {
+    const cargarConfig = async () => {
+      try {
+        const res = await obtenerConfigRecibo();
+        setConfig(res.data);
+      } catch {
+        setConfig({ nombre: 'Ticket de Venta', copias_auto: 1 });
+      }
+    };
+    cargarConfig();
+  }, []);
+
+  useEffect(() => {
+    if (!venta || !config || printedRef.current) return;
+    const copiasRaw = Number(config.copias_auto ?? 1);
+    const copias = Math.min(Math.max(Math.round(copiasRaw), 0), 5);
+    printedRef.current = true;
+
+    if (copias === 0) {
+      return;
+    }
+    if (copias === 1) {
+      setTimeout(() => window.print(), 400);
+      return;
+    }
+
+    let contador = 0;
+    const imprimir = () => {
+      if (contador >= copias) return;
+      window.print();
+      contador += 1;
+      if (contador < copias) {
+        setTimeout(imprimir, 900);
+      }
+    };
+    setTimeout(imprimir, 400);
+  }, [venta, config]);
 
   if (!venta) return <Typography>No hay datos de venta.</Typography>;
 
@@ -100,7 +141,14 @@ export default function Ticket() {
             pb: 3,
           }}
         >
-          <Typography variant="h6" align="center">🧾 Ticket de Venta</Typography>
+          {config?.logo_url && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+              <img src={config.logo_url} alt="Logo" style={{ maxWidth: 120, maxHeight: 80 }} />
+            </Box>
+          )}
+          <Typography variant="h6" align="center">
+            {config?.nombre || 'Ticket de Venta'}
+          </Typography>
           <Typography align="center">N° Pedido: #{String(venta.numero_pedido).padStart(2, '0')}</Typography>
           <Typography align="center" fontSize="0.75rem">{fechaHora}</Typography>
           <hr />
@@ -129,6 +177,11 @@ export default function Ticket() {
           <Typography variant="body2">Pedido: {venta.tipo_pedido}</Typography>
 
           <hr />
+          {config?.pie && (
+            <Typography variant="caption" align="center" display="block" sx={{ mb: 1 }}>
+              {config.pie}
+            </Typography>
+          )}
           <Button
             variant="outlined"
             fullWidth
