@@ -134,6 +134,18 @@ export const obtenerTicketsAbiertos = () => API.get('/tickets');
 export const eliminarTicket = (id) => API.delete(`/tickets/${id}`);
 
 // ─────────────────────────────────────────────
+// 🧪 Insumos
+// ─────────────────────────────────────────────
+export const obtenerInsumos = () => API.get('/insumos');
+export const crearInsumo = (data) => API.post('/insumos', data);
+export const editarInsumo = (id, data) => API.put(`/insumos/${id}`, data);
+export const eliminarInsumo = (id) => API.delete(`/insumos/${id}`);
+export const obtenerLotesInsumo = (id) => API.get(`/insumos/${id}/lotes`);
+export const obtenerMovimientosInsumo = (id) => API.get(`/insumos/${id}/movimientos`);
+export const registrarMovimientoInsumo = (id, data) =>
+  API.post(`/insumos/${id}/movimientos`, data);
+
+// ─────────────────────────────────────────────
 // 🏬 Locales
 // ─────────────────────────────────────────────
 export const obtenerLocales = () => API.get('/locales');

@@ -24,6 +24,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import TicketsAbiertos from './pages/TicketsAbiertos'; // ✅ NUEVO
 import Locales from './pages/Locales';
+import Insumos from './pages/Insumos';
 
 const drawerWidth = 240;
 
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="/ticket-caja" element={<TicketCaja />} />
             <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} /> {/* ✅ NUEVO */}
             <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
+            <Route path="/insumos" element={usuario ? <Insumos /> : <Navigate to="/login" />} />
           </Routes>
         </Box>
       </Box>
