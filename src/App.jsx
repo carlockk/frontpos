@@ -26,7 +26,7 @@ import TicketsAbiertos from './pages/TicketsAbiertos'; // ✅ NUEVO
 import Locales from './pages/Locales';
 import Insumos from './pages/Insumos';
 
-const drawerWidth = 240;
+const drawerWidth = 320;
 
 export default function App() {
   const { usuario } = useAuth();

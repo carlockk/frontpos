@@ -4,6 +4,7 @@ import {
   useMediaQuery, Divider, Button, Paper,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
   PieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
@@ -77,34 +78,49 @@ export default function Dashboard() {
     return (
       <Box
         sx={{
-          backgroundColor: '#fff',
-          border: '1px solid #e0e0e0',
+          backgroundColor: theme.palette.mode === 'dark' ? '#0f172a' : '#fff',
+          border: `1px solid ${theme.palette.divider}`,
           borderRadius: 1,
           px: 1.5,
           py: 1,
-          boxShadow: 1
+          boxShadow: theme.palette.mode === 'dark' ? '0 6px 18px rgba(0,0,0,0.45)' : 1
         }}
       >
-        <Typography variant="subtitle2">{nombre}</Typography>
-        <Typography variant="body2">Cantidad: {cantidad}</Typography>
-        <Typography variant="body2">Total: ${formatoMoneda(total)}</Typography>
+        <Typography variant="subtitle2" color="text.primary">{nombre}</Typography>
+        <Typography variant="body2" color="text.secondary">Cantidad: {cantidad}</Typography>
+        <Typography variant="body2" color="text.secondary">Total: ${formatoMoneda(total)}</Typography>
       </Box>
     );
   };
 
-  const bgCard1 = theme.palette.mode === 'dark' ? '#1e1e1e' : '#e3f2fd';
-  const bgCard2 = theme.palette.mode === 'dark' ? '#1e1e1e' : '#fff3e0';
-  const bgCard3 = theme.palette.mode === 'dark' ? '#1e1e1e' : '#e8f5e9';
-  const bgCard4 = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f3e5f5';
+  const bgCard1 = theme.palette.mode === 'dark' ? '#0b1220' : '#e3f2fd';
+  const bgCard2 = theme.palette.mode === 'dark' ? '#0f172a' : '#fff3e0';
+  const bgCard3 = theme.palette.mode === 'dark' ? '#111827' : '#e8f5e9';
+  const bgCard4 = theme.palette.mode === 'dark' ? '#111827' : '#f3e5f5';
+  const bgCard5 = theme.palette.mode === 'dark' ? '#0b1220' : '#e1f5fe';
+  const bgCard6 = theme.palette.mode === 'dark' ? '#0f172a' : '#f1f8e9';
+  const dividerColor = theme.palette.divider;
 
   return (
     <Box sx={{ mt: 4, px: isMobile ? 2 : 4 }}>
-      <Typography variant="h4" gutterBottom align={isMobile ? 'center' : 'left'}>
+      <Typography
+        variant="h4"
+        gutterBottom
+        align={isMobile ? 'center' : 'left'}
+        sx={{
+          color: theme.palette.mode === 'dark' ? '#e2e8f0' : 'inherit'
+        }}
+      >
         📈 Resumen de Ventas
       </Typography>
 
       <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2">Seleccionar Rango de Fechas</Typography>
+        <Typography
+          variant="subtitle2"
+          sx={{ color: theme.palette.mode === 'dark' ? '#cbd5f5' : 'inherit' }}
+        >
+          Seleccionar Rango de Fechas
+        </Typography>
         <DatePicker
           range
           value={rangoFechas}
@@ -122,7 +138,12 @@ export default function Dashboard() {
         <Button
           variant="outlined"
           color="secondary"
-          sx={{ mt: 1, ml: 1 }}
+          sx={{
+            mt: 1,
+            ml: 1,
+            borderColor: theme.palette.mode === 'dark' ? alpha('#fff', 0.2) : undefined,
+            color: theme.palette.mode === 'dark' ? '#e2e8f0' : undefined
+          }}
           onClick={() => {
             setRangoFechas([]);
             setResumen(null);
@@ -145,7 +166,7 @@ export default function Dashboard() {
               <Typography variant="subtitle1" fontWeight="bold" color="primary">
                 Total Vendido
               </Typography>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
               <Typography variant="h3" color="primary">
                 ${resumen.total.toLocaleString()}
               </Typography>
@@ -157,8 +178,8 @@ export default function Dashboard() {
               <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                 Cantidad de Ventas
               </Typography>
-              <Divider sx={{ my: 1 }} />
-              <Typography variant="h3" color="text.secondary">
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
+              <Typography variant="h3" color="text.primary">
                 {resumen.cantidad}
               </Typography>
             </CardContent>
@@ -169,7 +190,7 @@ export default function Dashboard() {
               <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                 Distribución por Tipo de Pago
               </Typography>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
               {pieChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -194,7 +215,7 @@ export default function Dashboard() {
               <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                 Distribucion por Tipo de Producto
               </Typography>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
               {pieChartProductoData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
@@ -215,25 +236,32 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card elevation={4} sx={{ backgroundColor: '#e1f5fe', flex: 1, height: '100%' }}>
+          <Card elevation={4} sx={{ backgroundColor: bgCard5, flex: 1, height: '100%' }}>
             <CardContent>
               <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                 Top Productos (Total Vendido)
               </Typography>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
               {topProductos.length > 0 ? (
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={topProductos} layout="vertical" margin={{ left: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" tickFormatter={(value) => `$${formatoMoneda(value)}`} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={theme.palette.mode === 'dark' ? alpha('#fff', 0.08) : undefined}
+                    />
+                    <XAxis
+                      type="number"
+                      tickFormatter={(value) => `$${formatoMoneda(value)}`}
+                      stroke={theme.palette.mode === 'dark' ? alpha('#fff', 0.5) : undefined}
+                    />
                     <YAxis
                       type="category"
                       dataKey="nombre"
                       width={120}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
                     />
                     <ReTooltip content={renderProductoTooltip} />
-                    <Bar dataKey="total" fill="#0288d1" />
+                    <Bar dataKey="total" fill={theme.palette.mode === 'dark' ? '#38bdf8' : '#0288d1'} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -244,28 +272,42 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card elevation={4} sx={{ backgroundColor: '#f1f8e9', flex: 1 }}>
+          <Card elevation={4} sx={{ backgroundColor: bgCard6, flex: 1 }}>
             <CardContent>
               <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
                 Productos Vendidos
               </Typography>
-              <Divider sx={{ my: 1 }} />
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
               {productosResumen.length > 0 ? (
-                <TableContainer component={Paper} sx={{ maxHeight: 320 }}>
+                <TableContainer
+                  component={Paper}
+                  sx={{
+                    maxHeight: 320,
+                    backgroundColor: theme.palette.mode === 'dark' ? '#0b1220' : undefined
+                  }}
+                >
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Producto</TableCell>
-                        <TableCell align="right">Cantidad</TableCell>
-                        <TableCell align="right">Total</TableCell>
+                        <TableCell sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#111827' : undefined }}>
+                          Producto
+                        </TableCell>
+                        <TableCell align="right" sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#111827' : undefined }}>
+                          Cantidad
+                        </TableCell>
+                        <TableCell align="right" sx={{ backgroundColor: theme.palette.mode === 'dark' ? '#111827' : undefined }}>
+                          Total
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {productosResumen.map((producto) => (
                         <TableRow key={producto.nombre}>
-                          <TableCell>{producto.nombre}</TableCell>
-                          <TableCell align="right">{producto.cantidad}</TableCell>
-                          <TableCell align="right">${formatoMoneda(producto.total)}</TableCell>
+                          <TableCell sx={{ color: theme.palette.text.primary }}>{producto.nombre}</TableCell>
+                          <TableCell align="right" sx={{ color: theme.palette.text.primary }}>{producto.cantidad}</TableCell>
+                          <TableCell align="right" sx={{ color: theme.palette.text.primary }}>
+                            ${formatoMoneda(producto.total)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

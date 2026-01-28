@@ -41,7 +41,7 @@ import { Brightness4, Brightness7 } from '@mui/icons-material';
 import { useThemeMode } from '../context/ThemeContext';
 import logo from '../possail.png';
 
-const drawerWidth = 290;
+const drawerWidth = 320;
 
 export default function Sidebar({ mobileOpen, toggleDrawer }) {
   const { usuario, logout, selectedLocal, seleccionarLocal } = useAuth();
@@ -111,6 +111,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         backgroundColor: '#111827',
         color: '#fff',
         borderRight: '1px solid #1f2937',
+        overflowX: 'hidden',
       }}
     >
       {/* Header */}
@@ -178,7 +179,27 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
 
       <Divider sx={{ borderColor: '#374151' }} />
 
-      <List sx={{ flexGrow: 1 }}>
+      <List
+        sx={{
+          flexGrow: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          pr: 0.5,
+          '&::-webkit-scrollbar': {
+            width: '8px'
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: '#0f172a'
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: '#334155',
+            borderRadius: '8px'
+          },
+          '&::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: '#475569'
+          }
+        }}
+      >
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/dashboard" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
             <Box sx={{ mr: 2 }}><DashboardIcon /></Box>
@@ -338,6 +359,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           width: drawerWidth,
           boxSizing: 'border-box',
           backgroundColor: '#111827',
+          overflowX: 'hidden'
         }
       }}
     >
