@@ -146,6 +146,9 @@ export const obtenerMovimientosInsumos = (params) =>
   API.get('/insumos/movimientos', { params });
 export const registrarMovimientoInsumo = (id, data) =>
   API.post(`/insumos/${id}/movimientos`, data);
+export const obtenerConfigAlertasInsumos = () => API.get('/insumos/alertas/config');
+export const guardarConfigAlertasInsumos = (data) => API.put('/insumos/alertas/config', data);
+export const enviarResumenAlertasInsumos = () => API.post('/insumos/alertas/resumen');
 
 // ─────────────────────────────────────────────
 // 🏬 Locales

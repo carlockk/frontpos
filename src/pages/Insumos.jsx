@@ -37,10 +37,14 @@ import {
   crearInsumo,
   editarInsumo,
   eliminarInsumo,
+  obtenerUsuarios,
   obtenerLotesInsumo,
   obtenerMovimientosInsumo,
   obtenerMovimientosInsumos,
-  registrarMovimientoInsumo
+  registrarMovimientoInsumo,
+  obtenerConfigAlertasInsumos,
+  guardarConfigAlertasInsumos,
+  enviarResumenAlertasInsumos
 } from '../services/api';
 
 const emptyForm = {
@@ -107,6 +111,13 @@ export default function Insumos() {
   const [histTab, setHistTab] = useState('entrada');
   const [histBusqueda, setHistBusqueda] = useState('');
   const [histFechas, setHistFechas] = useState([]);
+  const [soloBajoMinimo, setSoloBajoMinimo] = useState(false);
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertUsers, setAlertUsers] = useState([]);
+  const [alertSeleccionados, setAlertSeleccionados] = useState([]);
+  const [alertLoading, setAlertLoading] = useState(false);
+  const [alertSaving, setAlertSaving] = useState(false);
+  const [alertSending, setAlertSending] = useState(false);
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -140,6 +151,49 @@ export default function Insumos() {
     setDialogOpen(true);
     setError('');
     setInfo('');
+  };
+
+  const openAlertas = async () => {
+    setAlertOpen(true);
+    setAlertLoading(true);
+    setError('');
+    try {
+      const [usuariosRes, configRes] = await Promise.all([
+        obtenerUsuarios(),
+        obtenerConfigAlertasInsumos()
+      ]);
+      setAlertUsers(usuariosRes.data || []);
+      setAlertSeleccionados(configRes.data?.usuarios || []);
+    } catch (err) {
+      setError('No se pudieron cargar los usuarios para alertas.');
+    } finally {
+      setAlertLoading(false);
+    }
+  };
+
+  const handleGuardarAlertas = async () => {
+    try {
+      setAlertSaving(true);
+      await guardarConfigAlertasInsumos({ usuarios: alertSeleccionados });
+      setInfo('Alertas configuradas.');
+      setAlertOpen(false);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo guardar la configuracion.');
+    } finally {
+      setAlertSaving(false);
+    }
+  };
+
+  const handleEnviarResumen = async () => {
+    try {
+      setAlertSending(true);
+      await enviarResumenAlertasInsumos();
+      setInfo('Resumen enviado.');
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo enviar el resumen.');
+    } finally {
+      setAlertSending(false);
+    }
   };
 
   const openEdit = (insumo) => {
@@ -393,6 +447,15 @@ export default function Insumos() {
     });
   }, [histMovimientos, histTab, histBusqueda, histFechas]);
 
+  const insumosStockBajo = useMemo(
+    () =>
+      insumos.filter(
+        (insumo) =>
+          Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0)
+      ),
+    [insumos]
+  );
+
   return (
     <Box sx={{ mt: 4, px: 2 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -408,6 +471,16 @@ export default function Insumos() {
               <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
                 Crear insumo
               </Button>
+              {usuario?.rol === 'superadmin' && (
+                <>
+                  <Button variant="outlined" onClick={openAlertas}>
+                    Configurar alertas
+                  </Button>
+                  <Button variant="outlined" onClick={handleEnviarResumen} disabled={alertSending}>
+                    {alertSending ? 'Enviando...' : 'Enviar resumen'}
+                  </Button>
+                </>
+              )}
               <Button variant="outlined" onClick={openHistorial}>
                 Ver historial de E/S
               </Button>
@@ -422,6 +495,20 @@ export default function Insumos() {
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {info && <Alert severity="success" sx={{ mb: 2 }}>{info}</Alert>}
+        {insumosStockBajo.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Hay {insumosStockBajo.length} insumo(s) por debajo del stock mínimo.
+          </Alert>
+        )}
+        <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+          <Button
+            variant={soloBajoMinimo ? 'contained' : 'outlined'}
+            color="warning"
+            onClick={() => setSoloBajoMinimo((prev) => !prev)}
+          >
+            {soloBajoMinimo ? 'Mostrando: Bajo mínimo' : 'Filtrar: Bajo mínimo'}
+          </Button>
+        </Stack>
 
         <TableContainer component={Paper} variant="outlined">
           <Table size="small">
@@ -444,10 +531,18 @@ export default function Insumos() {
                   </TableCell>
                 </TableRow>
               )}
-              {insumos.map((insumo) => {
+              {insumos
+                .filter((insumo) => {
+                  if (!soloBajoMinimo) return true;
+                  return Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
+                })
+                .map((insumo) => {
                 const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
                 return (
-                  <TableRow key={insumo._id}>
+                  <TableRow
+                    key={insumo._id}
+                    sx={stockBajo ? { backgroundColor: 'rgba(251, 191, 36, 0.15)' } : {}}
+                  >
                     <TableCell>{insumo.nombre}</TableCell>
                     <TableCell>{insumo.unidad}</TableCell>
                     <TableCell>
@@ -559,6 +654,49 @@ export default function Insumos() {
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={handleSave}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={alertOpen} onClose={() => setAlertOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Configurar alertas de insumos</DialogTitle>
+        <DialogContent dividers>
+          {alertLoading ? (
+            <Typography color="text.secondary">Cargando usuarios...</Typography>
+          ) : (
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <TextField
+                select
+                label="Usuarios que reciben alertas"
+                SelectProps={{
+                  multiple: true,
+                  value: alertSeleccionados,
+                  onChange: (e) => setAlertSeleccionados(e.target.value),
+                  renderValue: (selected) => {
+                    if (!selected || selected.length === 0) return 'Sin destinatarios';
+                    const map = new Map(alertUsers.map((u) => [u._id, u]));
+                    return selected
+                      .map((id) => map.get(id)?.nombre || 'Usuario')
+                      .join(', ');
+                  }
+                }}
+              >
+                {alertUsers.map((usuarioItem) => (
+                  <MenuItem key={usuarioItem._id} value={usuarioItem._id}>
+                    {usuarioItem.nombre} ({usuarioItem.email})
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Typography variant="body2" color="text.secondary">
+                Estas alertas se enviaran para el local seleccionado.
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAlertOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleGuardarAlertas} disabled={alertSaving}>
+            {alertSaving ? 'Guardando...' : 'Guardar'}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -690,59 +828,10 @@ export default function Insumos() {
               Registrar movimiento
             </Button>
           </Stack>
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle2" gutterBottom>Historial</Typography>
-            <Tabs
-              value={movTab}
-              onChange={(_e, value) => setMovTab(value)}
-              sx={{ mb: 1 }}
-            >
-              <Tab label="Entradas" value="entrada" />
-              <Tab label="Salidas" value="salida" />
-            </Tabs>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-              <TextField
-                label="Buscar por motivo/lote"
-                value={movBusqueda}
-                onChange={(e) => setMovBusqueda(e.target.value)}
-                size="small"
-              />
-              <DatePicker
-                range
-                value={movFechas}
-                onChange={(dates) => setMovFechas([...dates])}
-                format="YYYY-MM-DD"
-                style={{
-                  padding: '6px',
-                  borderRadius: 6,
-                  border: '1px solid #e5e7eb'
-                }}
-              />
-            </Stack>
-            {movimientosFiltrados.length === 0 ? (
-              <Typography color="text.secondary">Sin movimientos.</Typography>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Cantidad</TableCell>
-                    <TableCell>Motivo</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {movimientosFiltrados.map((mov) => (
-                    <TableRow key={mov._id}>
-                      <TableCell>{new Date(mov.fecha).toLocaleString()}</TableCell>
-                      <TableCell>{mov.tipo}</TableCell>
-                      <TableCell>{mov.cantidad}</TableCell>
-                      <TableCell>{mov.motivo || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              El historial completo está disponible en “Ver historial de E/S”.
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
