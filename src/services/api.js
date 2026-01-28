@@ -142,6 +142,8 @@ export const editarInsumo = (id, data) => API.put(`/insumos/${id}`, data);
 export const eliminarInsumo = (id) => API.delete(`/insumos/${id}`);
 export const obtenerLotesInsumo = (id) => API.get(`/insumos/${id}/lotes`);
 export const obtenerMovimientosInsumo = (id) => API.get(`/insumos/${id}/movimientos`);
+export const obtenerMovimientosInsumos = (params) =>
+  API.get('/insumos/movimientos', { params });
 export const registrarMovimientoInsumo = (id, data) =>
   API.post(`/insumos/${id}/movimientos`, data);
 
