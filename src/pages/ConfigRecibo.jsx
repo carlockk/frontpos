@@ -8,6 +8,7 @@ import {
   Typography,
   Alert
 } from '@mui/material';
+import VistaTicket from '../components/VistaTicket';
 import { guardarConfigRecibo, obtenerConfigRecibo } from '../services/api';
 
 export default function ConfigRecibo() {
@@ -23,6 +24,7 @@ export default function ConfigRecibo() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [previewVenta, setPreviewVenta] = useState(null);
 
   useEffect(() => {
     const cargar = async () => {
@@ -35,6 +37,16 @@ export default function ConfigRecibo() {
           copias_auto: data.copias_auto ?? 1,
           logo_url: data.logo_url || '',
           remove_logo: false
+        });
+        setPreviewVenta({
+          numero_pedido: 1,
+          fecha: new Date().toISOString(),
+          productos: [
+            { nombre: 'Producto demo', cantidad: 1, precio_unitario: 2500, observacion: '' }
+          ],
+          total: 2500,
+          tipo_pago: 'efectivo',
+          tipo_pedido: '—'
         });
       } catch (err) {
         setError('No se pudo cargar la configuracion.');
@@ -50,6 +62,14 @@ export default function ConfigRecibo() {
     if (form.logo_url && !form.remove_logo) return form.logo_url;
     return '';
   }, [logoFile, form.logo_url, form.remove_logo]);
+
+  useEffect(() => {
+    if (!previewVenta) return;
+    setPreviewVenta((prev) => ({
+      ...prev,
+      fecha: new Date().toISOString()
+    }));
+  }, [form.nombre, form.pie, form.copias_auto, previewLogo]);
 
   const handleSave = async () => {
     setError('');
@@ -165,6 +185,17 @@ export default function ConfigRecibo() {
             {saving ? 'Guardando...' : 'Guardar configuracion'}
           </Button>
         </Stack>
+      </Paper>
+
+      <Paper elevation={2} sx={{ p: 3, mt: 3, maxWidth: 640 }}>
+        <Typography variant="subtitle1" sx={{ mb: 2 }}>
+          Vista previa del ticket
+        </Typography>
+        {previewVenta ? (
+          <VistaTicket venta={previewVenta} />
+        ) : (
+          <Typography color="text.secondary">No hay vista previa disponible.</Typography>
+        )}
       </Paper>
     </Box>
   );
