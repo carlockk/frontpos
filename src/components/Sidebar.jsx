@@ -205,20 +205,24 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
         )}
 
         {/* Categorias */}
-        <ListItem disablePadding>
-          <ListItemButton component={Link} to="/categorias" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-            <Box sx={{ mr: 2 }}><StoreIcon /></Box>
-            <ListItemText primary="Categorias" />
-          </ListItemButton>
-        </ListItem>
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/categorias" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><StoreIcon /></Box>
+              <ListItemText primary="Categorias" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
         {/* Locales */}
-        <ListItem disablePadding>
-          <ListItemButton component={Link} to="/locales" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-            <Box sx={{ mr: 2 }}><StorefrontIcon /></Box>
-            <ListItemText primary="Locales" />
-          </ListItemButton>
-        </ListItem>
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/locales" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><StorefrontIcon /></Box>
+              <ListItemText primary="Locales" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
         {/* POS */}
         <ListItem disablePadding>
@@ -268,12 +272,14 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             </Collapse>
 
             {/* Usuarios */}
-            <ListItem disablePadding>
-              <ListItemButton component={Link} to="/usuarios" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
-                <Box sx={{ mr: 2 }}><PeopleAltIcon /></Box>
-                <ListItemText primary="Usuarios" />
-              </ListItemButton>
-            </ListItem>
+            {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+              <ListItem disablePadding>
+                <ListItemButton component={Link} to="/usuarios" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+                  <Box sx={{ mr: 2 }}><PeopleAltIcon /></Box>
+                  <ListItemText primary="Usuarios" />
+                </ListItemButton>
+              </ListItem>
+            )}
           </>
         )}
       </List>
