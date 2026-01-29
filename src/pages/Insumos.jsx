@@ -872,11 +872,11 @@ export default function Insumos() {
                 scrollButtons="auto"
                 allowScrollButtonsMobile
               >
-                <Tab value="todas" label="Todas" />
+                <Tab value="todas" label="Todas" sx={{ fontWeight: 400, fontSize: '0.8rem' }} />
                 {categoriasInsumo.map((cat) => (
-                  <Tab key={cat._id} value={cat._id} label={cat.nombre} />
+                  <Tab key={cat._id} value={cat._id} label={cat.nombre} sx={{ fontWeight: 400, fontSize: '0.8rem' }} />
                 ))}
-                <Tab value="sin" label="Sin categoria" />
+                <Tab value="sin" label="Sin categoria" sx={{ fontWeight: 400, fontSize: '0.8rem' }} />
               </Tabs>
             ) : (
               <DragDropContext onDragEnd={handleOrdenCategorias}>
