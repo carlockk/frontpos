@@ -109,7 +109,20 @@ export default function ConfigRecibo() {
 
   return (
     <Box sx={{ mt: 4, px: 2 }}>
-      <Paper elevation={3} sx={{ p: 3, maxWidth: 640 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          maxWidth: 640,
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <Typography variant="h5" gutterBottom>Configuracion de Recibos</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Personaliza el ticket que se imprime al finalizar la venta.
@@ -187,7 +200,21 @@ export default function ConfigRecibo() {
         </Stack>
       </Paper>
 
-      <Paper elevation={2} sx={{ p: 3, mt: 3, maxWidth: 640 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          mt: 3,
+          maxWidth: 640,
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <Typography variant="subtitle1" sx={{ mb: 2 }}>
           Vista previa del ticket
         </Typography>

@@ -23,6 +23,7 @@ export default function Caja() {
       alert('✅ Caja abierta correctamente.');
       setCajaAbierta(true);
       setMontoInicial('');
+      navigate('/pos');
     } catch (err) {
       alert(err.response?.data?.error || '❌ Ya hay una caja abierta.');
     }

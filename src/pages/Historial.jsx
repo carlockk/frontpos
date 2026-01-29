@@ -59,7 +59,20 @@ export default function Historial() {
           sx={{ mb: 2 }}
         />
 
-        <Paper sx={{ maxHeight: '75vh', overflowY: 'auto', p: 1 }}>
+        <Paper
+          elevation={0}
+          sx={{
+            maxHeight: '75vh',
+            overflowY: 'auto',
+            p: 1,
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            fontSize: '0.92rem',
+            '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+              fontSize: '0.92rem'
+            }
+          }}
+        >
           {Object.entries(agrupadas).map(([fecha, ventas]) => (
             <Box key={fecha} sx={{ mb: 2 }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mt: 1 }}>{fecha}</Typography>

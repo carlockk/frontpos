@@ -136,11 +136,20 @@ export const eliminarTicket = (id) => API.delete(`/tickets/${id}`);
 // ─────────────────────────────────────────────
 // 🧪 Insumos
 // ─────────────────────────────────────────────
-export const obtenerInsumos = () => API.get('/insumos');
+export const obtenerInsumos = (params) => API.get('/insumos', { params });
 export const crearInsumo = (data) => API.post('/insumos', data);
 export const editarInsumo = (id, data) => API.put(`/insumos/${id}`, data);
 export const eliminarInsumo = (id) => API.delete(`/insumos/${id}`);
-export const obtenerLotesInsumo = (id) => API.get(`/insumos/${id}/lotes`);
+export const actualizarEstadoInsumo = (id, data) => API.put(`/insumos/${id}/estado`, data);
+export const clonarInsumos = (data) => API.post('/insumos/clonar', data);
+export const obtenerLotesInsumo = (id, params) =>
+  API.get(`/insumos/${id}/lotes`, { params });
+export const eliminarLoteInsumo = (insumoId, loteId) =>
+  API.delete(`/insumos/${insumoId}/lotes/${loteId}`);
+export const eliminarLotesInsumo = (insumoId) =>
+  API.delete(`/insumos/${insumoId}/lotes`);
+export const actualizarEstadoLoteInsumo = (insumoId, loteId, data) =>
+  API.put(`/insumos/${insumoId}/lotes/${loteId}/estado`, data);
 export const obtenerMovimientosInsumo = (id) => API.get(`/insumos/${id}/movimientos`);
 export const obtenerMovimientosInsumos = (params) =>
   API.get('/insumos/movimientos', { params });

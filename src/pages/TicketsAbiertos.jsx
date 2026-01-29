@@ -51,7 +51,19 @@ export default function TicketsAbiertos() {
       ) : (
         <Stack spacing={2}>
           {tickets.map(ticket => (
-            <Paper key={ticket._id} sx={{ p: 2 }}>
+            <Paper
+              key={ticket._id}
+              elevation={0}
+              sx={{
+                p: 2,
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+                fontSize: '0.92rem',
+                '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+                  fontSize: '0.92rem'
+                }
+              }}
+            >
               <Typography fontWeight="bold">{ticket.nombre}</Typography>
               <Typography variant="body2" color="text.secondary">
                 Total: ${ticket.total.toFixed(0)}

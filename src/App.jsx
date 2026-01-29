@@ -74,7 +74,7 @@ export default function App() {
                 }
               : {
                   flexGrow: 1,
-                  p: 3,
+                  p: 0.25,
                   mt: isMobile ? 7 : 0,
                   width: { sm: `calc(100% - ${drawerWidth}px)` }
                 }

@@ -411,7 +411,7 @@ export default function POS() {
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
-                borderRadius: 2,
+                borderRadius: 1.25,
                 border: `1px solid ${cardBorderColor}`,
                 backgroundColor: cardBackground,
                 boxShadow:
@@ -432,8 +432,11 @@ export default function POS() {
                 sx={{
                   position: 'relative',
                   width: '100%',
-                  pt: '100%',
-                  borderRadius: 1.5,
+                  pt: '55%',
+                  borderTopLeftRadius: 8,
+                  borderTopRightRadius: 8,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
                   overflow: 'hidden',
                   border: `1px solid ${thumbBorderColor}`,
                   backgroundColor: thumbBackground,
@@ -441,19 +444,62 @@ export default function POS() {
                 }}
               >
                 {imagenSrc ? (
-                  <Box
-                    component="img"
-                    src={imagenSrc}
-                    alt={prod.nombre}
-                    sx={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      filter: agotado ? 'grayscale(1)' : 'none'
-                    }}
-                  />
+                  isMobile ? (
+                    <Box
+                      component="img"
+                      src={imagenSrc}
+                      alt={prod.nombre}
+                      sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        filter: agotado ? 'grayscale(1)' : 'none'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(imagenSrc, '_blank', 'noopener,noreferrer');
+                      }}
+                    />
+                  ) : (
+                    <Tooltip
+                      title={
+                        <Box
+                          component="img"
+                          src={imagenSrc}
+                          alt={prod.nombre}
+                          sx={{ width: 240, height: 240, objectFit: 'cover' }}
+                        />
+                      }
+                      placement="top"
+                      PopperProps={{
+                        modifiers: [
+                          {
+                            name: 'offset',
+                            options: {
+                              offset: [0, -40]
+                            }
+                          }
+                        ]
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={imagenSrc}
+                        alt={prod.nombre}
+                        sx={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          filter: agotado ? 'grayscale(1)' : 'none'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </Tooltip>
+                  )
                 ) : (
                   <Stack
                     position="absolute"
@@ -553,7 +599,7 @@ export default function POS() {
                       sx={{
                         px: 1,
                         py: 0.2,
-                        borderRadius: 999,
+                        borderRadius: 6,
                         border: `1px solid ${cardBorderColor}`,
                         color: agotado
                           ? '#f87171'
@@ -576,7 +622,7 @@ export default function POS() {
                       sx={{
                         px: 1,
                         py: 0.2,
-                        borderRadius: 999,
+                        borderRadius: 6,
                         border: `1px solid ${cardBorderColor}`,
                         color: descColor,
                         fontWeight: 600,
@@ -628,7 +674,7 @@ export default function POS() {
                 onClick={() => handleAgregar(prod)}
                 sx={{
                   mt: 2,
-                  borderRadius: 2,
+                  borderRadius: 1.25,
                   textTransform: 'none',
                   fontWeight: 600,
                   fontSize: '0.85rem',
@@ -712,7 +758,7 @@ export default function POS() {
                               : 'black',
                           px: 1.5,
                           py: 0.5,
-                          borderRadius: 1,
+                          borderRadius: 0.75,
                           mb: 1,
                           cursor: 'pointer',
                           fontSize: '0.85rem'

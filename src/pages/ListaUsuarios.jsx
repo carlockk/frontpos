@@ -142,7 +142,19 @@ export default function ListaUsuarios() {
           Crear nuevo usuario
         </Button>
       </Stack>
-      <Paper sx={{ overflowX: 'auto' }}>
+      <Paper
+        elevation={0}
+        sx={{
+          overflowX: 'auto',
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>

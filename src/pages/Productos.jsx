@@ -407,7 +407,20 @@ export default function Productos() {
       </Box>
 
       {/* Filtros y buscador */}
-      <Paper sx={{ p: 2, mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 3,
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <BuscadorProducto
           busqueda={busqueda}
           setBusqueda={setBusqueda}
@@ -424,7 +437,15 @@ export default function Productos() {
       </Paper>
 
       {/* Tabla de productos */}
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <Paper
+        elevation={0}
+        sx={{
+          width: '100%',
+          overflow: 'hidden',
+          backgroundColor: 'transparent',
+          boxShadow: 'none'
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>

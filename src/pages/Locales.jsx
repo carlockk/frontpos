@@ -161,7 +161,19 @@ export default function Locales() {
 
   return (
     <Box sx={{ mt: 4, px: 2 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
@@ -197,7 +209,11 @@ export default function Locales() {
             <CircularProgress />
           </Box>
         ) : (
-          <TableContainer component={Paper} variant="outlined">
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}
+        >
             <Table size="small">
               <TableHead>
                 <TableRow>

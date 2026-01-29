@@ -29,6 +29,7 @@ import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
 import DatePicker, { DateObject } from 'react-multi-date-picker';
 import { useTheme } from '@mui/material/styles';
 import { useAuth } from '../context/AuthContext';
@@ -37,14 +38,20 @@ import {
   crearInsumo,
   editarInsumo,
   eliminarInsumo,
+  actualizarEstadoInsumo,
+  obtenerLocales,
   obtenerUsuarios,
   obtenerLotesInsumo,
+  eliminarLoteInsumo,
+  eliminarLotesInsumo,
+  actualizarEstadoLoteInsumo,
   obtenerMovimientosInsumo,
   obtenerMovimientosInsumos,
   registrarMovimientoInsumo,
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
-  enviarResumenAlertasInsumos
+  enviarResumenAlertasInsumos,
+  clonarInsumos
 } from '../services/api';
 
 const emptyForm = {
@@ -97,6 +104,8 @@ export default function Insumos() {
   const [lotesOpen, setLotesOpen] = useState(false);
   const [lotesInsumo, setLotesInsumo] = useState(null);
   const [lotes, setLotes] = useState([]);
+  const [loteDeleteLoading, setLoteDeleteLoading] = useState(false);
+  const [mostrarLotesOcultos, setMostrarLotesOcultos] = useState(false);
 
   const [movOpen, setMovOpen] = useState(false);
   const [movimientos, setMovimientos] = useState([]);
@@ -112,12 +121,19 @@ export default function Insumos() {
   const [histBusqueda, setHistBusqueda] = useState('');
   const [histFechas, setHistFechas] = useState([]);
   const [soloBajoMinimo, setSoloBajoMinimo] = useState(false);
+  const [mostrarInsumosOcultos, setMostrarInsumosOcultos] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertUsers, setAlertUsers] = useState([]);
   const [alertSeleccionados, setAlertSeleccionados] = useState([]);
   const [alertLoading, setAlertLoading] = useState(false);
   const [alertSaving, setAlertSaving] = useState(false);
   const [alertSending, setAlertSending] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneLocales, setCloneLocales] = useState([]);
+  const [cloneTarget, setCloneTarget] = useState('');
+  const [cloneMode, setCloneMode] = useState('all');
+  const [cloneInsumo, setCloneInsumo] = useState(null);
+  const [cloneLoading, setCloneLoading] = useState(false);
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -132,7 +148,9 @@ export default function Insumos() {
     setLoading(true);
     setError('');
     try {
-      const res = await obtenerInsumos();
+      const res = await obtenerInsumos({
+        incluir_ocultos: mostrarInsumosOcultos ? 'true' : 'false'
+      });
       setInsumos(res.data || []);
     } catch (err) {
       setError('No se pudieron cargar los insumos.');
@@ -143,7 +161,29 @@ export default function Insumos() {
 
   useEffect(() => {
     fetchInsumos();
-  }, [selectedLocal?._id]);
+  }, [selectedLocal?._id, mostrarInsumosOcultos]);
+
+  useEffect(() => {
+    const cargarLocales = async () => {
+      if (usuario?.rol !== 'superadmin') return;
+      try {
+        const res = await obtenerLocales();
+        setCloneLocales(res.data || []);
+      } catch {
+        setCloneLocales([]);
+      }
+    };
+    cargarLocales();
+  }, [usuario?.rol]);
+
+  const handleOcultarInsumo = async (insumoId, activo) => {
+    try {
+      await actualizarEstadoInsumo(insumoId, { activo });
+      fetchInsumos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo actualizar el insumo.');
+    }
+  };
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -193,6 +233,49 @@ export default function Insumos() {
       setError(err?.response?.data?.error || 'No se pudo enviar el resumen.');
     } finally {
       setAlertSending(false);
+    }
+  };
+
+  const openCloneAll = () => {
+    setCloneMode('all');
+    setCloneInsumo(null);
+    setCloneTarget('');
+    setCloneOpen(true);
+  };
+
+  const openCloneOne = (insumo) => {
+    setCloneMode('single');
+    setCloneInsumo(insumo);
+    setCloneTarget('');
+    setCloneOpen(true);
+  };
+
+  const handleClone = async () => {
+    if (!selectedLocal?._id) {
+      setError('Selecciona un local de origen.');
+      return;
+    }
+    if (!cloneTarget) {
+      setError('Selecciona un local destino.');
+      return;
+    }
+    try {
+      setCloneLoading(true);
+      const payload = {
+        sourceLocalId: selectedLocal._id,
+        targetLocalId: cloneTarget,
+        clonarTodos: cloneMode === 'all'
+      };
+      if (cloneMode === 'single' && cloneInsumo?._id) {
+        payload.insumoId = cloneInsumo._id;
+      }
+      const res = await clonarInsumos(payload);
+      setInfo(res.data?.mensaje || 'Clonado completado.');
+      setCloneOpen(false);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo clonar el insumo.');
+    } finally {
+      setCloneLoading(false);
     }
   };
 
@@ -280,12 +363,66 @@ export default function Insumos() {
 
   const openLotes = async (insumo) => {
     try {
-      const res = await obtenerLotesInsumo(insumo._id);
+      const res = await obtenerLotesInsumo(insumo._id, {
+        incluir_ocultos: mostrarLotesOcultos ? 'true' : 'false'
+      });
       setLotes(res.data || []);
       setLotesInsumo(insumo);
       setLotesOpen(true);
     } catch (err) {
       setError('No se pudieron cargar los lotes.');
+    }
+  };
+
+  const recargarLotes = async (insumoId, incluirOcultos) => {
+    const res = await obtenerLotesInsumo(insumoId, {
+      incluir_ocultos: incluirOcultos ? 'true' : 'false'
+    });
+    setLotes(res.data || []);
+  };
+
+  const handleEliminarLote = async (loteId) => {
+    if (!lotesInsumo) return;
+    const confirmar = window.confirm('Seguro que deseas eliminar este lote?');
+    if (!confirmar) return;
+    try {
+      setLoteDeleteLoading(true);
+      await eliminarLoteInsumo(lotesInsumo._id, loteId);
+      await recargarLotes(lotesInsumo._id, mostrarLotesOcultos);
+      fetchInsumos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar el lote.');
+    } finally {
+      setLoteDeleteLoading(false);
+    }
+  };
+
+  const handleOcultarLote = async (loteId, activo) => {
+    if (!lotesInsumo) return;
+    try {
+      setLoteDeleteLoading(true);
+      await actualizarEstadoLoteInsumo(lotesInsumo._id, loteId, { activo });
+      await recargarLotes(lotesInsumo._id, mostrarLotesOcultos);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo actualizar el lote.');
+    } finally {
+      setLoteDeleteLoading(false);
+    }
+  };
+
+  const handleEliminarTodosLotes = async () => {
+    if (!lotesInsumo) return;
+    const confirmar = window.confirm('Seguro que deseas eliminar todos los lotes?');
+    if (!confirmar) return;
+    try {
+      setLoteDeleteLoading(true);
+      await eliminarLotesInsumo(lotesInsumo._id);
+      setLotes([]);
+      fetchInsumos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudieron eliminar los lotes.');
+    } finally {
+      setLoteDeleteLoading(false);
     }
   };
 
@@ -458,7 +595,19 @@ export default function Insumos() {
 
   return (
     <Box sx={{ mt: 4, px: 2 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          fontSize: '0.92rem',
+          '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
+            fontSize: '0.92rem'
+          },
+          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+        }}
+      >
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2} sx={{ mb: 2 }}>
           <Box>
             <Typography variant="h5" gutterBottom>Insumos</Typography>
@@ -473,21 +622,45 @@ export default function Insumos() {
               </Button>
               {usuario?.rol === 'superadmin' && (
                 <>
-                  <Button variant="outlined" onClick={openAlertas}>
+                  <Button
+                    variant="text"
+                    onClick={openAlertas}
+                    sx={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 400 }}
+                  >
                     Configurar alertas
                   </Button>
-                  <Button variant="outlined" onClick={handleEnviarResumen} disabled={alertSending}>
+                  <Button
+                    variant="text"
+                    onClick={handleEnviarResumen}
+                    disabled={alertSending}
+                    sx={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 400 }}
+                  >
                     {alertSending ? 'Enviando...' : 'Enviar resumen'}
+                  </Button>
+                  <Button
+                    variant="text"
+                    onClick={openCloneAll}
+                    sx={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 400 }}
+                  >
+                    Clonar inventario
                   </Button>
                 </>
               )}
-              <Button variant="outlined" onClick={openHistorial}>
+              <Button
+                variant="text"
+                onClick={openHistorial}
+                sx={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 400 }}
+              >
                 Ver historial de E/S
               </Button>
             </Stack>
           )}
           {!isAdmin && (
-            <Button variant="outlined" onClick={openHistorial}>
+            <Button
+              variant="text"
+              onClick={openHistorial}
+              sx={{ fontSize: '0.82rem', color: '#6b7280', fontWeight: 400 }}
+            >
               Ver historial de E/S
             </Button>
           )}
@@ -508,9 +681,19 @@ export default function Insumos() {
           >
             {soloBajoMinimo ? 'Mostrando: Bajo mínimo' : 'Filtrar: Bajo mínimo'}
           </Button>
+          <Button
+            variant={mostrarInsumosOcultos ? 'contained' : 'outlined'}
+            onClick={() => setMostrarInsumosOcultos((prev) => !prev)}
+          >
+            {mostrarInsumosOcultos ? 'Ocultos visibles' : 'Mostrar ocultos'}
+          </Button>
         </Stack>
 
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}
+        >
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -538,10 +721,17 @@ export default function Insumos() {
                 })
                 .map((insumo) => {
                 const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
+                const oculto = insumo.activo === false;
                 return (
                   <TableRow
                     key={insumo._id}
-                    sx={stockBajo ? { backgroundColor: 'rgba(251, 191, 36, 0.15)' } : {}}
+                    sx={
+                      oculto
+                        ? { backgroundColor: 'rgba(148, 163, 184, 0.18)' }
+                        : stockBajo
+                          ? { backgroundColor: 'rgba(251, 191, 36, 0.15)' }
+                          : {}
+                    }
                   >
                     <TableCell>{insumo.nombre}</TableCell>
                     <TableCell>{insumo.unidad}</TableCell>
@@ -551,6 +741,14 @@ export default function Insumos() {
                         color={stockBajo ? 'warning' : 'success'}
                         label={Number(insumo.stock_total || 0)}
                       />
+                      {oculto && (
+                        <Chip
+                          size="small"
+                          color="default"
+                          label="Oculto"
+                          sx={{ ml: 1 }}
+                        />
+                      )}
                     </TableCell>
                   <TableCell>{Number(insumo.stock_minimo || 0)}</TableCell>
                   <TableCell>
@@ -576,6 +774,35 @@ export default function Insumos() {
                       <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
                         <DeleteIcon fontSize="small" />
                       </IconButton>
+                    )}
+                    {isAdmin && !oculto && (
+                      <Button
+                        size="small"
+                        color="warning"
+                        onClick={() => handleOcultarInsumo(insumo._id, false)}
+                        sx={{ ml: 1 }}
+                      >
+                        Ocultar
+                      </Button>
+                    )}
+                    {usuario?.rol === 'superadmin' && !oculto && (
+                      <Button
+                        size="small"
+                        onClick={() => openCloneOne(insumo)}
+                        sx={{ ml: 1 }}
+                      >
+                        Clonar
+                      </Button>
+                    )}
+                    {isAdmin && mostrarInsumosOcultos && oculto && (
+                      <Button
+                        size="small"
+                        color="success"
+                        onClick={() => handleOcultarInsumo(insumo._id, true)}
+                        sx={{ ml: 1 }}
+                      >
+                        Restaurar
+                      </Button>
                     )}
                   </TableCell>
                   </TableRow>
@@ -700,6 +927,42 @@ export default function Insumos() {
         </DialogActions>
       </Dialog>
 
+      <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Clonar insumos</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {cloneMode === 'all'
+                ? 'Se clonaran todos los insumos del local actual (sin lotes ni vencimientos).'
+                : `Se clonara el insumo "${cloneInsumo?.nombre || ''}" (sin lotes ni vencimientos).`}
+            </Typography>
+            <TextField
+              select
+              label="Local destino"
+              value={cloneTarget}
+              onChange={(e) => setCloneTarget(e.target.value)}
+            >
+              {cloneLocales
+                .filter((l) => l._id !== selectedLocal?._id)
+                .map((local) => (
+                  <MenuItem key={local._id} value={local._id}>
+                    {local.nombre}
+                  </MenuItem>
+                ))}
+            </TextField>
+            <Typography variant="caption" color="text.secondary">
+              Si un insumo ya existe en el local destino, se omitira.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloneOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleClone} disabled={cloneLoading}>
+            {cloneLoading ? 'Clonando...' : 'Clonar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Eliminar insumo</DialogTitle>
         <DialogContent dividers>
@@ -718,6 +981,32 @@ export default function Insumos() {
       <Dialog open={lotesOpen} onClose={() => setLotesOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Lotes de {lotesInsumo?.nombre}</DialogTitle>
         <DialogContent dividers>
+          {isAdmin && (
+            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+              <Button
+                variant={mostrarLotesOcultos ? 'contained' : 'outlined'}
+                onClick={async () => {
+                  const next = !mostrarLotesOcultos;
+                  setMostrarLotesOcultos(next);
+                  if (lotesInsumo) {
+                    await recargarLotes(lotesInsumo._id, next);
+                  }
+                }}
+              >
+                {mostrarLotesOcultos ? 'Ocultos visibles' : 'Mostrar ocultos'}
+              </Button>
+              {lotes.length > 0 && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={handleEliminarTodosLotes}
+                  disabled={loteDeleteLoading}
+                >
+                  {loteDeleteLoading ? 'Eliminando...' : 'Eliminar todos los lotes'}
+                </Button>
+              )}
+            </Stack>
+          )}
           {lotes.length === 0 ? (
             <Typography color="text.secondary">No hay lotes registrados.</Typography>
           ) : (
@@ -728,6 +1017,7 @@ export default function Insumos() {
                   <TableCell>Vencimiento</TableCell>
                   <TableCell>Cantidad</TableCell>
                   <TableCell>Estado</TableCell>
+                  {isAdmin && <TableCell align="right">Acciones</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -737,6 +1027,7 @@ export default function Insumos() {
                     estado === 'vencido' ? 'Vencido' : estado === 'por_vencer' ? 'Por vencer' : 'Normal';
                   const color =
                     estado === 'vencido' ? 'error' : estado === 'por_vencer' ? 'warning' : 'success';
+                  const loteOculto = lote.activo === false;
                   return (
                     <TableRow key={lote._id}>
                       <TableCell>{lote.lote || '-'}</TableCell>
@@ -748,7 +1039,32 @@ export default function Insumos() {
                       <TableCell>{lote.cantidad}</TableCell>
                       <TableCell>
                         <Chip size="small" color={color} label={label} />
+                        {isAdmin && loteOculto && (
+                          <Chip size="small" label="Oculto" sx={{ ml: 1 }} />
+                        )}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                            <Button
+                              size="small"
+                              color={lote.activo ? 'warning' : 'success'}
+                              onClick={() => handleOcultarLote(lote._id, !lote.activo)}
+                              disabled={loteDeleteLoading}
+                            >
+                              {lote.activo ? 'Ocultar' : 'Restaurar'}
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              onClick={() => handleEliminarLote(lote._id)}
+                              disabled={loteDeleteLoading}
+                            >
+                              Eliminar
+                            </Button>
+                          </Stack>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
@@ -888,11 +1204,28 @@ export default function Insumos() {
                 value={histFechas}
                 onChange={(dates) => setHistFechas([...dates])}
                 format="YYYY-MM-DD"
-                style={{
-                  padding: '6px',
-                  borderRadius: 6,
-                  border: '1px solid #e5e7eb'
-                }}
+                render={(value, openCalendar) => (
+                  <Box
+                    onClick={openCalendar}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      px: 1.25,
+                      py: 0.7,
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 1,
+                      minHeight: 36,
+                      cursor: 'pointer',
+                      color: '#6b7280'
+                    }}
+                  >
+                    <SearchIcon fontSize="small" />
+                    <Typography variant="body2">
+                      {value || 'Buscar por fecha'}
+                    </Typography>
+                  </Box>
+                )}
               />
             </Stack>
           </Stack>
