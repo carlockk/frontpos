@@ -30,8 +30,10 @@ import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import DatePicker, { DateObject } from 'react-multi-date-picker';
 import { useTheme } from '@mui/material/styles';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../context/AuthContext';
 import {
   obtenerInsumos,
@@ -51,13 +53,20 @@ import {
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
   enviarResumenAlertasInsumos,
-  clonarInsumos
+  clonarInsumos,
+  actualizarOrdenInsumos,
+  obtenerCategoriasInsumo,
+  crearCategoriaInsumo,
+  editarCategoriaInsumo,
+  eliminarCategoriaInsumo,
+  actualizarOrdenCategoriasInsumo
 } from '../services/api';
 
 const emptyForm = {
   nombre: '',
   descripcion: '',
   unidad: 'unid',
+  categoria: '',
   stock_minimo: '',
   alerta_vencimiento_dias: '7',
   stock_inicial: '',
@@ -134,6 +143,13 @@ export default function Insumos() {
   const [cloneMode, setCloneMode] = useState('all');
   const [cloneInsumo, setCloneInsumo] = useState(null);
   const [cloneLoading, setCloneLoading] = useState(false);
+  const [ordenando, setOrdenando] = useState(false);
+  const [categoriasInsumo, setCategoriasInsumo] = useState([]);
+  const [categoriaDialogOpen, setCategoriaDialogOpen] = useState(false);
+  const [categoriaNombre, setCategoriaNombre] = useState('');
+  const [categoriaEditando, setCategoriaEditando] = useState(null);
+  const [categoriaOrdenando, setCategoriaOrdenando] = useState(false);
+  const [tabCategoria, setTabCategoria] = useState('todas');
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -162,6 +178,18 @@ export default function Insumos() {
   useEffect(() => {
     fetchInsumos();
   }, [selectedLocal?._id, mostrarInsumosOcultos]);
+
+  useEffect(() => {
+    const cargarCategorias = async () => {
+      try {
+        const res = await obtenerCategoriasInsumo();
+        setCategoriasInsumo(res.data || []);
+      } catch {
+        setCategoriasInsumo([]);
+      }
+    };
+    cargarCategorias();
+  }, [selectedLocal?._id]);
 
   useEffect(() => {
     const cargarLocales = async () => {
@@ -279,11 +307,95 @@ export default function Insumos() {
     }
   };
 
+  const handleOrdenar = async (result) => {
+    if (!result.destination) return;
+    if (!isAdmin) return;
+    const items = Array.from(insumos);
+    const [reordenado] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reordenado);
+    setInsumos(items);
+    try {
+      setOrdenando(true);
+      await actualizarOrdenInsumos({ orden: items.map((i) => i._id) });
+      setInfo('Orden actualizado.');
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo actualizar el orden.');
+    } finally {
+      setOrdenando(false);
+    }
+  };
+
+  const openCategorias = () => {
+    setCategoriaDialogOpen(true);
+    setCategoriaEditando(null);
+    setCategoriaNombre('');
+  };
+
+  const handleGuardarCategoria = async () => {
+    if (!categoriaNombre.trim()) {
+      setError('Ingresa un nombre de categoria.');
+      return;
+    }
+    try {
+      if (categoriaEditando) {
+        await editarCategoriaInsumo(categoriaEditando._id, {
+          nombre: categoriaNombre.trim()
+        });
+      } else {
+        await crearCategoriaInsumo({ nombre: categoriaNombre.trim() });
+      }
+      const res = await obtenerCategoriasInsumo();
+      setCategoriasInsumo(res.data || []);
+      setCategoriaNombre('');
+      setCategoriaEditando(null);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo guardar la categoria.');
+    }
+  };
+
+  const handleEditarCategoria = (categoria) => {
+    setCategoriaEditando(categoria);
+    setCategoriaNombre(categoria.nombre || '');
+  };
+
+  const handleEliminarCategoria = async (categoria) => {
+    const confirmar = window.confirm('Seguro que deseas eliminar esta categoria?');
+    if (!confirmar) return;
+    try {
+      await eliminarCategoriaInsumo(categoria._id);
+      const res = await obtenerCategoriasInsumo();
+      setCategoriasInsumo(res.data || []);
+      if (tabCategoria === categoria._id) {
+        setTabCategoria('todas');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar la categoria.');
+    }
+  };
+
+  const handleOrdenCategorias = async (result) => {
+    if (!result.destination) return;
+    if (!isAdmin) return;
+    const items = Array.from(categoriasInsumo);
+    const [reordenado] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reordenado);
+    setCategoriasInsumo(items);
+    try {
+      setCategoriaOrdenando(true);
+      await actualizarOrdenCategoriasInsumo({ orden: items.map((c) => c._id) });
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo ordenar las categorias.');
+    } finally {
+      setCategoriaOrdenando(false);
+    }
+  };
+
   const openEdit = (insumo) => {
     setForm({
       nombre: insumo.nombre || '',
       descripcion: insumo.descripcion || '',
       unidad: insumo.unidad || 'unid',
+      categoria: insumo.categoria?._id || '',
       stock_minimo: insumo.stock_minimo ?? '',
       alerta_vencimiento_dias: insumo.alerta_vencimiento_dias ?? '7',
       stock_inicial: '',
@@ -309,6 +421,7 @@ export default function Insumos() {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim(),
       unidad: form.unidad,
+      categoria: form.categoria || null,
       stock_minimo: form.stock_minimo === '' ? 0 : Number(form.stock_minimo),
       alerta_vencimiento_dias: form.alerta_vencimiento_dias === '' ? 7 : Number(form.alerta_vencimiento_dias)
     };
@@ -584,6 +697,19 @@ export default function Insumos() {
     });
   }, [histMovimientos, histTab, histBusqueda, histFechas]);
 
+  const insumosFiltrados = useMemo(() => {
+    return insumos.filter((insumo) => {
+      if (soloBajoMinimo) {
+        if (Number(insumo.stock_total || 0) > Number(insumo.stock_minimo || 0)) {
+          return false;
+        }
+      }
+      if (tabCategoria === 'todas') return true;
+      if (tabCategoria === 'sin') return !insumo.categoria;
+      return insumo.categoria?._id === tabCategoria;
+    });
+  }, [insumos, soloBajoMinimo, tabCategoria]);
+
   const insumosStockBajo = useMemo(
     () =>
       insumos.filter(
@@ -687,129 +813,168 @@ export default function Insumos() {
           >
             {mostrarInsumosOcultos ? 'Ocultos visibles' : 'Mostrar ocultos'}
           </Button>
+          {isAdmin && (
+            <Button
+              variant="outlined"
+              onClick={openCategorias}
+            >
+              Crear categorias de insumos
+            </Button>
+          )}
         </Stack>
+
+        {categoriasInsumo.length > 0 && (
+          <Tabs
+            value={tabCategoria}
+            onChange={(_e, value) => setTabCategoria(value)}
+            sx={{ mb: 2 }}
+          >
+            <Tab value="todas" label="Todas" />
+            {categoriasInsumo.map((cat) => (
+              <Tab key={cat._id} value={cat._id} label={cat.nombre} />
+            ))}
+            <Tab value="sin" label="Sin categoria" />
+          </Tabs>
+        )}
 
         <TableContainer
           component={Paper}
           variant="outlined"
           sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}
         >
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Nombre</TableCell>
-                <TableCell>Unidad</TableCell>
-                <TableCell>Stock</TableCell>
-                <TableCell>Minimo</TableCell>
-                <TableCell>Vencimiento</TableCell>
-                <TableCell>Ingresos/Egresos</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {insumos.length === 0 && (
+          <DragDropContext onDragEnd={handleOrdenar}>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={7} align="center">
-                    No hay insumos registrados.
-                  </TableCell>
+                  <TableCell sx={{ width: 40 }} />
+                  <TableCell>Nombre</TableCell>
+                  <TableCell>Unidad</TableCell>
+                  <TableCell>Stock</TableCell>
+                  <TableCell>Minimo</TableCell>
+                  <TableCell>Vencimiento</TableCell>
+                  <TableCell>Ingresos/Egresos</TableCell>
+                  <TableCell align="right">Acciones</TableCell>
                 </TableRow>
-              )}
-              {insumos
-                .filter((insumo) => {
-                  if (!soloBajoMinimo) return true;
-                  return Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
-                })
-                .map((insumo) => {
-                const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
-                const oculto = insumo.activo === false;
-                return (
-                  <TableRow
-                    key={insumo._id}
-                    sx={
-                      oculto
-                        ? { backgroundColor: 'rgba(148, 163, 184, 0.18)' }
-                        : stockBajo
-                          ? { backgroundColor: 'rgba(251, 191, 36, 0.15)' }
-                          : {}
-                    }
-                  >
-                    <TableCell>{insumo.nombre}</TableCell>
-                    <TableCell>{insumo.unidad}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={stockBajo ? 'warning' : 'success'}
-                        label={Number(insumo.stock_total || 0)}
-                      />
-                      {oculto && (
-                        <Chip
-                          size="small"
-                          color="default"
-                          label="Oculto"
-                          sx={{ ml: 1 }}
-                        />
-                      )}
-                    </TableCell>
-                  <TableCell>{Number(insumo.stock_minimo || 0)}</TableCell>
-                  <TableCell>
-                    <Button size="small" onClick={() => openLotes(insumo)}>
-                      Ver lotes
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="small" onClick={() => openMovimientoTipo(insumo, 'entrada')}>
-                      Entrada
-                    </Button>
-                    <Button size="small" onClick={() => openMovimientoTipo(insumo, 'salida')}>
-                      Salida
-                    </Button>
-                  </TableCell>
-                  <TableCell align="right">
-                    {puedeEditar && (
-                      <IconButton size="small" onClick={() => openEdit(insumo)}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+              </TableHead>
+              <Droppable droppableId="insumos-table" direction="vertical">
+                {(provided) => (
+                  <TableBody ref={provided.innerRef} {...provided.droppableProps}>
+                    {insumosFiltrados.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={8} align="center">
+                          No hay insumos registrados.
+                        </TableCell>
+                      </TableRow>
                     )}
-                    {isAdmin && (
-                      <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                    {isAdmin && !oculto && (
-                      <Button
-                        size="small"
-                        color="warning"
-                        onClick={() => handleOcultarInsumo(insumo._id, false)}
-                        sx={{ ml: 1 }}
-                      >
-                        Ocultar
-                      </Button>
-                    )}
-                    {usuario?.rol === 'superadmin' && !oculto && (
-                      <Button
-                        size="small"
-                        onClick={() => openCloneOne(insumo)}
-                        sx={{ ml: 1 }}
-                      >
-                        Clonar
-                      </Button>
-                    )}
-                    {isAdmin && mostrarInsumosOcultos && oculto && (
-                      <Button
-                        size="small"
-                        color="success"
-                        onClick={() => handleOcultarInsumo(insumo._id, true)}
-                        sx={{ ml: 1 }}
-                      >
-                        Restaurar
-                      </Button>
-                    )}
-                  </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                    {insumosFiltrados.map((insumo, index) => {
+                        const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
+                        const oculto = insumo.activo === false;
+                        return (
+                          <Draggable key={insumo._id} draggableId={insumo._id} index={index} isDragDisabled={!isAdmin || ordenando}>
+                            {(draggableProvided) => (
+                              <TableRow
+                                ref={draggableProvided.innerRef}
+                                {...draggableProvided.draggableProps}
+                                sx={
+                                  oculto
+                                    ? { backgroundColor: 'rgba(148, 163, 184, 0.18)' }
+                                    : stockBajo
+                                      ? { backgroundColor: 'rgba(251, 191, 36, 0.15)' }
+                                      : {}
+                                }
+                              >
+                                <TableCell sx={{ width: 40 }}>
+                                  <IconButton
+                                    size="small"
+                                    {...draggableProvided.dragHandleProps}
+                                    disabled={!isAdmin || ordenando}
+                                  >
+                                    <DragIndicatorIcon fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                                <TableCell>{insumo.nombre}</TableCell>
+                                <TableCell>{insumo.unidad}</TableCell>
+                                <TableCell>
+                                  <Chip
+                                    size="small"
+                                    color={stockBajo ? 'warning' : 'success'}
+                                    label={Number(insumo.stock_total || 0)}
+                                  />
+                                  {oculto && (
+                                    <Chip
+                                      size="small"
+                                      color="default"
+                                      label="Oculto"
+                                      sx={{ ml: 1 }}
+                                    />
+                                  )}
+                                </TableCell>
+                                <TableCell>{Number(insumo.stock_minimo || 0)}</TableCell>
+                                <TableCell>
+                                  <Button size="small" onClick={() => openLotes(insumo)} sx={{ fontWeight: 400, color: '#6b7280' }}>
+                                    Ver lotes
+                                  </Button>
+                                </TableCell>
+                                <TableCell>
+                                  <Button size="small" onClick={() => openMovimientoTipo(insumo, 'entrada')} sx={{ fontWeight: 400, color: '#6b7280' }}>
+                                    Entrada
+                                  </Button>
+                                  <Button size="small" onClick={() => openMovimientoTipo(insumo, 'salida')} sx={{ fontWeight: 400, color: '#6b7280' }}>
+                                    Salida
+                                  </Button>
+                                </TableCell>
+                                <TableCell align="right">
+                                  {puedeEditar && (
+                                    <IconButton size="small" onClick={() => openEdit(insumo)}>
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                  {isAdmin && (
+                                    <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  )}
+                                  {isAdmin && !oculto && (
+                                    <Button
+                                      size="small"
+                                      color="warning"
+                                      onClick={() => handleOcultarInsumo(insumo._id, false)}
+                                      sx={{ ml: 1 }}
+                                    >
+                                      Ocultar
+                                    </Button>
+                                  )}
+                                  {usuario?.rol === 'superadmin' && !oculto && (
+                                    <Button
+                                      size="small"
+                                      onClick={() => openCloneOne(insumo)}
+                                      sx={{ ml: 1 }}
+                                    >
+                                      Clonar
+                                    </Button>
+                                  )}
+                                  {isAdmin && mostrarInsumosOcultos && oculto && (
+                                    <Button
+                                      size="small"
+                                      color="success"
+                                      onClick={() => handleOcultarInsumo(insumo._id, true)}
+                                      sx={{ ml: 1 }}
+                                    >
+                                      Restaurar
+                                    </Button>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Draggable>
+                        );
+                      })}
+                    {provided.placeholder}
+                  </TableBody>
+                )}
+              </Droppable>
+            </Table>
+          </DragDropContext>
         </TableContainer>
       </Paper>
 
@@ -839,6 +1004,19 @@ export default function Insumos() {
               {unidades.map((u) => (
                 <MenuItem key={u.value} value={u.value}>
                   {u.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Categoria (opcional)"
+              value={form.categoria}
+              onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
+            >
+              <MenuItem value="">Sin categoria</MenuItem>
+              {categoriasInsumo.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>
+                  {cat.nombre}
                 </MenuItem>
               ))}
             </TextField>
@@ -924,6 +1102,79 @@ export default function Insumos() {
           <Button variant="contained" onClick={handleGuardarAlertas} disabled={alertSaving}>
             {alertSaving ? 'Guardando...' : 'Guardar'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={categoriaDialogOpen} onClose={() => setCategoriaDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Categorias de insumos</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label={categoriaEditando ? 'Editar categoria' : 'Nueva categoria'}
+              value={categoriaNombre}
+              onChange={(e) => setCategoriaNombre(e.target.value)}
+              fullWidth
+            />
+            <Button variant="contained" onClick={handleGuardarCategoria}>
+              {categoriaEditando ? 'Guardar cambios' : 'Crear categoria'}
+            </Button>
+            {categoriasInsumo.length === 0 ? (
+              <Typography color="text.secondary">No hay categorias registradas.</Typography>
+            ) : (
+              <DragDropContext onDragEnd={handleOrdenCategorias}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 40 }} />
+                      <TableCell>Nombre</TableCell>
+                      <TableCell align="right">Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <Droppable droppableId="categorias-insumos" direction="vertical">
+                    {(provided) => (
+                      <TableBody ref={provided.innerRef} {...provided.droppableProps}>
+                        {categoriasInsumo.map((cat, index) => (
+                          <Draggable
+                            key={cat._id}
+                            draggableId={cat._id}
+                            index={index}
+                            isDragDisabled={!isAdmin || categoriaOrdenando}
+                          >
+                            {(draggableProvided) => (
+                              <TableRow ref={draggableProvided.innerRef} {...draggableProvided.draggableProps}>
+                                <TableCell sx={{ width: 40 }}>
+                                  <IconButton
+                                    size="small"
+                                    {...draggableProvided.dragHandleProps}
+                                    disabled={!isAdmin || categoriaOrdenando}
+                                  >
+                                    <DragIndicatorIcon fontSize="small" />
+                                  </IconButton>
+                                </TableCell>
+                                <TableCell>{cat.nombre}</TableCell>
+                                <TableCell align="right">
+                                  <Button size="small" onClick={() => handleEditarCategoria(cat)}>
+                                    Editar
+                                  </Button>
+                                  <Button size="small" color="error" onClick={() => handleEliminarCategoria(cat)}>
+                                    Eliminar
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </TableBody>
+                    )}
+                  </Droppable>
+                </Table>
+              </DragDropContext>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoriaDialogOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
