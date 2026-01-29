@@ -150,6 +150,7 @@ export default function Insumos() {
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [categoriaOrdenando, setCategoriaOrdenando] = useState(false);
   const [tabCategoria, setTabCategoria] = useState('todas');
+  const [ordenarTabs, setOrdenarTabs] = useState(false);
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -383,6 +384,7 @@ export default function Insumos() {
     try {
       setCategoriaOrdenando(true);
       await actualizarOrdenCategoriasInsumo({ orden: items.map((c) => c._id) });
+      setInfo('Categorias ordenadas.');
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo ordenar las categorias.');
     } finally {
@@ -824,17 +826,108 @@ export default function Insumos() {
         </Stack>
 
         {categoriasInsumo.length > 0 && (
-          <Tabs
-            value={tabCategoria}
-            onChange={(_e, value) => setTabCategoria(value)}
-            sx={{ mb: 2 }}
-          >
-            <Tab value="todas" label="Todas" />
-            {categoriasInsumo.map((cat) => (
-              <Tab key={cat._id} value={cat._id} label={cat.nombre} />
-            ))}
-            <Tab value="sin" label="Sin categoria" />
-          </Tabs>
+          <Box sx={{ mb: 2 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Categorias
+              </Typography>
+              {isAdmin && (
+                <Button
+                  variant="text"
+                  onClick={() => setOrdenarTabs((prev) => !prev)}
+                  sx={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 400 }}
+                >
+                  {ordenarTabs ? 'Listo' : 'Ordenar'}
+                </Button>
+              )}
+            </Stack>
+
+            {!ordenarTabs ? (
+              <Tabs
+                value={tabCategoria}
+                onChange={(_e, value) => setTabCategoria(value)}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                <Tab value="todas" label="Todas" />
+                {categoriasInsumo.map((cat) => (
+                  <Tab key={cat._id} value={cat._id} label={cat.nombre} />
+                ))}
+                <Tab value="sin" label="Sin categoria" />
+              </Tabs>
+            ) : (
+              <DragDropContext onDragEnd={handleOrdenCategorias}>
+                <Droppable droppableId="categorias-tabs" direction="horizontal">
+                  {(provided) => (
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      sx={{ overflowX: 'auto', pb: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 2,
+                          border: '1px solid #e5e7eb',
+                          bgcolor: '#f3f4f6',
+                          fontSize: '0.8rem',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Todas
+                      </Box>
+                      {categoriasInsumo.map((cat, index) => (
+                        <Draggable
+                          key={cat._id}
+                          draggableId={cat._id}
+                          index={index}
+                          isDragDisabled={!isAdmin || categoriaOrdenando}
+                        >
+                          {(draggableProvided) => (
+                            <Box
+                              ref={draggableProvided.innerRef}
+                              {...draggableProvided.draggableProps}
+                              {...draggableProvided.dragHandleProps}
+                              sx={{
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: 2,
+                                border: '1px solid #e5e7eb',
+                                bgcolor: '#f9fafb',
+                                fontSize: '0.8rem',
+                                whiteSpace: 'nowrap',
+                                cursor: 'grab'
+                              }}
+                            >
+                              {cat.nombre}
+                            </Box>
+                          )}
+                        </Draggable>
+                      ))}
+                      <Box
+                        sx={{
+                          px: 1.5,
+                          py: 0.5,
+                          borderRadius: 2,
+                          border: '1px solid #e5e7eb',
+                          bgcolor: '#f3f4f6',
+                          fontSize: '0.8rem',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Sin categoria
+                      </Box>
+                      {provided.placeholder}
+                    </Stack>
+                  )}
+                </Droppable>
+              </DragDropContext>
+            )}
+          </Box>
         )}
 
         <TableContainer
