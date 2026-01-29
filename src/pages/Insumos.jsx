@@ -47,6 +47,7 @@ import {
   eliminarLoteInsumo,
   eliminarLotesInsumo,
   actualizarEstadoLoteInsumo,
+  crearLoteInsumo,
   obtenerMovimientosInsumo,
   obtenerMovimientosInsumos,
   registrarMovimientoInsumo,
@@ -71,7 +72,10 @@ const emptyForm = {
   alerta_vencimiento_dias: '7',
   stock_inicial: '',
   lote_inicial: '',
-  vencimiento_inicial: ''
+  vencimiento_inicial: '',
+  lote_nuevo: '',
+  vencimiento_nuevo: '',
+  cantidad_nueva: ''
 };
 
 const unidades = [
@@ -402,7 +406,10 @@ export default function Insumos() {
       alerta_vencimiento_dias: insumo.alerta_vencimiento_dias ?? '7',
       stock_inicial: '',
       lote_inicial: '',
-      vencimiento_inicial: ''
+      vencimiento_inicial: '',
+      lote_nuevo: '',
+      vencimiento_nuevo: '',
+      cantidad_nueva: ''
     });
     setEditingId(insumo._id);
     setDialogOpen(true);
@@ -430,7 +437,22 @@ export default function Insumos() {
 
     try {
       if (editingId) {
+        const tieneLoteNuevo =
+          form.lote_nuevo.trim() ||
+          form.vencimiento_nuevo ||
+          form.cantidad_nueva !== '';
+        if (tieneLoteNuevo && !form.lote_nuevo.trim() && !form.vencimiento_nuevo) {
+          setError('Para registrar un lote debes indicar lote o vencimiento.');
+          return;
+        }
         await editarInsumo(editingId, payload);
+        if (tieneLoteNuevo) {
+          await crearLoteInsumo(editingId, {
+            lote: form.lote_nuevo.trim() || undefined,
+            fecha_vencimiento: form.vencimiento_nuevo || undefined,
+            cantidad: form.cantidad_nueva === '' ? 0 : Number(form.cantidad_nueva)
+          });
+        }
         setInfo('Insumo actualizado.');
       } else {
         const creado = await crearInsumo(payload);
@@ -1125,6 +1147,31 @@ export default function Insumos() {
               value={form.alerta_vencimiento_dias}
               onChange={(e) => setForm((prev) => ({ ...prev, alerta_vencimiento_dias: e.target.value }))}
             />
+            {editingId && (
+              <>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Registrar lote (opcional)
+                </Typography>
+                <TextField
+                  label="Lote"
+                  value={form.lote_nuevo}
+                  onChange={(e) => setForm((prev) => ({ ...prev, lote_nuevo: e.target.value }))}
+                />
+                <TextField
+                  label="Fecha vencimiento"
+                  type="date"
+                  InputLabelProps={{ shrink: true }}
+                  value={form.vencimiento_nuevo}
+                  onChange={(e) => setForm((prev) => ({ ...prev, vencimiento_nuevo: e.target.value }))}
+                />
+                <TextField
+                  label="Cantidad (opcional)"
+                  type="number"
+                  value={form.cantidad_nueva}
+                  onChange={(e) => setForm((prev) => ({ ...prev, cantidad_nueva: e.target.value }))}
+                />
+              </>
+            )}
             {!editingId && (
               <>
                 <TextField

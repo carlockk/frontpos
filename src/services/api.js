@@ -157,6 +157,8 @@ export const eliminarLotesInsumo = (insumoId) =>
   API.delete(`/insumos/${insumoId}/lotes`);
 export const actualizarEstadoLoteInsumo = (insumoId, loteId, data) =>
   API.put(`/insumos/${insumoId}/lotes/${loteId}/estado`, data);
+export const crearLoteInsumo = (insumoId, data) =>
+  API.post(`/insumos/${insumoId}/lotes`, data);
 export const obtenerMovimientosInsumo = (id) => API.get(`/insumos/${id}/movimientos`);
 export const obtenerMovimientosInsumos = (params) =>
   API.get('/insumos/movimientos', { params });
