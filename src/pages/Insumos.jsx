@@ -32,6 +32,9 @@ import InfoIcon from '@mui/icons-material/InfoOutlined';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import RestoreIcon from '@mui/icons-material/Restore';
 import DatePicker, { DateObject } from 'react-multi-date-picker';
 import { useTheme } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -748,7 +751,7 @@ export default function Insumos() {
   );
 
   return (
-    <Box sx={{ mt: 4, px: 2 }}>
+    <Box sx={{ mt: 2, px: 1 }}>
       <Paper
         elevation={0}
         sx={{
@@ -759,7 +762,7 @@ export default function Insumos() {
           '& .MuiTypography-body1, & .MuiTypography-body2, & .MuiTypography-subtitle2': {
             fontSize: '0.92rem'
           },
-          '& .MuiTableCell-root': { fontSize: '0.85rem' }
+          '& .MuiTableCell-root': { fontSize: '0.75rem' }
         }}
       >
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="center" spacing={2} sx={{ mb: 2 }}>
@@ -972,8 +975,8 @@ export default function Insumos() {
                   <TableCell>Stock</TableCell>
                   <TableCell>Minimo</TableCell>
                   <TableCell>Vencimiento</TableCell>
-                  <TableCell>Ingresos/Egresos</TableCell>
-                  <TableCell align="right">Acciones</TableCell>
+                  <TableCell sx={{ fontSize: '0.75rem' }}>Ingresos/Egresos</TableCell>
+                  <TableCell align="right" sx={{ fontSize: '0.75rem' }}>Acciones</TableCell>
                 </TableRow>
               </TableHead>
               <Droppable droppableId="insumos-table" direction="vertical">
@@ -1018,7 +1021,7 @@ export default function Insumos() {
                                     <Typography
                                       variant="body2"
                                       color="text.secondary"
-                                      sx={{ maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: insumo.descripcion ? 'pointer' : 'default' }}
+                                      sx={{ maxWidth: 80, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: insumo.descripcion ? 'pointer' : 'default' }}
                                       onClick={() => {
                                         if (!isMobile || !insumo.descripcion) return;
                                         setDescTexto(insumo.descripcion);
@@ -1051,54 +1054,68 @@ export default function Insumos() {
                                     Ver lotes
                                   </Button>
                                 </TableCell>
-                                <TableCell>
-                                  <Button size="small" onClick={() => openMovimientoTipo(insumo, 'entrada')} sx={{ fontWeight: 400, color: '#6b7280' }}>
-                                    Entrada
-                                  </Button>
-                                  <Button size="small" onClick={() => openMovimientoTipo(insumo, 'salida')} sx={{ fontWeight: 400, color: '#6b7280' }}>
-                                    Salida
-                                  </Button>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                  <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'nowrap' }}>
+                                    <Button
+                                      size="small"
+                                      onClick={() => openMovimientoTipo(insumo, 'entrada')}
+                                      sx={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem', minWidth: 'auto', px: 0.5 }}
+                                    >
+                                      Entrada
+                                    </Button>
+                                    <Button
+                                      size="small"
+                                      onClick={() => openMovimientoTipo(insumo, 'salida')}
+                                      sx={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem', minWidth: 'auto', px: 0.5 }}
+                                    >
+                                      Salida
+                                    </Button>
+                                  </Stack>
                                 </TableCell>
-                                <TableCell align="right">
-                                  {puedeEditar && (
-                                    <IconButton size="small" onClick={() => openEdit(insumo)}>
-                                      <EditIcon fontSize="small" />
-                                    </IconButton>
-                                  )}
-                                  {isAdmin && (
-                                    <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  )}
-                                  {isAdmin && !oculto && (
-                                    <Button
-                                      size="small"
-                                      color="warning"
-                                      onClick={() => handleOcultarInsumo(insumo._id, false)}
-                                      sx={{ ml: 1 }}
-                                    >
-                                      Ocultar
-                                    </Button>
-                                  )}
-                                  {usuario?.rol === 'superadmin' && !oculto && (
-                                    <Button
-                                      size="small"
-                                      onClick={() => openCloneOne(insumo)}
-                                      sx={{ ml: 1 }}
-                                    >
-                                      Clonar
-                                    </Button>
-                                  )}
-                                  {isAdmin && mostrarInsumosOcultos && oculto && (
-                                    <Button
-                                      size="small"
-                                      color="success"
-                                      onClick={() => handleOcultarInsumo(insumo._id, true)}
-                                      sx={{ ml: 1 }}
-                                    >
-                                      Restaurar
-                                    </Button>
-                                  )}
+                                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                                  <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ flexWrap: 'nowrap' }}>
+                                    {puedeEditar && (
+                                      <IconButton size="small" onClick={() => openEdit(insumo)}>
+                                        <EditIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                    {isAdmin && (
+                                      <IconButton size="small" onClick={() => confirmDelete(insumo)} color="error">
+                                        <DeleteIcon fontSize="small" />
+                                      </IconButton>
+                                    )}
+                                    {isAdmin && !oculto && (
+                                      <Tooltip title="Ocultar" arrow>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleOcultarInsumo(insumo._id, false)}
+                                        >
+                                          <VisibilityOffIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                    {usuario?.rol === 'superadmin' && !oculto && (
+                                      <Tooltip title="Clonar" arrow>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => openCloneOne(insumo)}
+                                        >
+                                          <ContentCopyIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                    {isAdmin && mostrarInsumosOcultos && oculto && (
+                                      <Tooltip title="Restaurar" arrow>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => handleOcultarInsumo(insumo._id, true)}
+                                          color="success"
+                                        >
+                                          <RestoreIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Stack>
                                 </TableCell>
                               </TableRow>
                             )}
