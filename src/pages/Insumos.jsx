@@ -22,7 +22,8 @@ import {
   Typography,
   Tabs,
   Tab,
-  useMediaQuery
+  useMediaQuery,
+  Tooltip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
@@ -156,6 +157,8 @@ export default function Insumos() {
   const [categoriaOrdenando, setCategoriaOrdenando] = useState(false);
   const [tabCategoria, setTabCategoria] = useState('todas');
   const [ordenarTabs, setOrdenarTabs] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+  const [descTexto, setDescTexto] = useState('');
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -964,6 +967,7 @@ export default function Insumos() {
                 <TableRow>
                   <TableCell sx={{ width: 40 }} />
                   <TableCell>Nombre</TableCell>
+                  <TableCell>Descripcion</TableCell>
                   <TableCell>Unidad</TableCell>
                   <TableCell>Stock</TableCell>
                   <TableCell>Minimo</TableCell>
@@ -977,7 +981,7 @@ export default function Insumos() {
                   <TableBody ref={provided.innerRef} {...provided.droppableProps}>
                     {insumosFiltrados.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} align="center">
+                        <TableCell colSpan={9} align="center">
                           No hay insumos registrados.
                         </TableCell>
                       </TableRow>
@@ -1009,6 +1013,22 @@ export default function Insumos() {
                                   </IconButton>
                                 </TableCell>
                                 <TableCell>{insumo.nombre}</TableCell>
+                                <TableCell>
+                                  <Tooltip title={insumo.descripcion || ''} placement="top" arrow disableHoverListener={isMobile}>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: insumo.descripcion ? 'pointer' : 'default' }}
+                                      onClick={() => {
+                                        if (!isMobile || !insumo.descripcion) return;
+                                        setDescTexto(insumo.descripcion);
+                                        setDescOpen(true);
+                                      }}
+                                    >
+                                      {insumo.descripcion || '-'}
+                                    </Typography>
+                                  </Tooltip>
+                                </TableCell>
                                 <TableCell>{insumo.unidad}</TableCell>
                                 <TableCell>
                                   <Chip
@@ -1323,6 +1343,16 @@ export default function Insumos() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCategoriaDialogOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={descOpen} onClose={() => setDescOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Descripcion</DialogTitle>
+        <DialogContent dividers>
+          <Typography>{descTexto || '-'}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDescOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
