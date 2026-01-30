@@ -1099,6 +1099,7 @@ export default function Insumos() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{editingId ? 'Editar insumo' : 'Crear insumo'}</DialogTitle>
         <DialogContent dividers>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Nombre"
