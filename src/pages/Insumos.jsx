@@ -430,7 +430,10 @@ export default function Insumos() {
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim(),
       unidad: form.unidad,
-      categoria: form.categoria || null,
+      categoria:
+        form.categoria && typeof form.categoria === 'object'
+          ? form.categoria._id
+          : form.categoria || null,
       stock_minimo: form.stock_minimo === '' ? 0 : Number(form.stock_minimo),
       alerta_vencimiento_dias: form.alerta_vencimiento_dias === '' ? 7 : Number(form.alerta_vencimiento_dias)
     };
