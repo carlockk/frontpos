@@ -440,14 +440,7 @@ export default function Insumos() {
 
     try {
       if (editingId) {
-        const tieneLoteNuevo =
-          form.lote_nuevo.trim() ||
-          form.vencimiento_nuevo ||
-          form.cantidad_nueva !== '';
-        if (tieneLoteNuevo && !form.lote_nuevo.trim() && !form.vencimiento_nuevo) {
-          setError('Para registrar un lote debes indicar lote o vencimiento.');
-          return;
-        }
+        const tieneLoteNuevo = form.lote_nuevo.trim() || form.vencimiento_nuevo;
         await editarInsumo(editingId, payload);
         if (tieneLoteNuevo) {
           await crearLoteInsumo(editingId, {
@@ -1169,7 +1162,7 @@ export default function Insumos() {
                   onChange={(e) => setForm((prev) => ({ ...prev, vencimiento_nuevo: e.target.value }))}
                 />
                 <TextField
-                  label="Cantidad (opcional)"
+                  label="Cantidad (opcional si defines lote/fecha)"
                   type="number"
                   value={form.cantidad_nueva}
                   onChange={(e) => setForm((prev) => ({ ...prev, cantidad_nueva: e.target.value }))}
