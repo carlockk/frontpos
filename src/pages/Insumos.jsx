@@ -75,7 +75,8 @@ const emptyForm = {
   vencimiento_inicial: '',
   lote_nuevo: '',
   vencimiento_nuevo: '',
-  cantidad_nueva: ''
+  cantidad_nueva: '',
+  stock_total_manual: ''
 };
 
 const unidades = [
@@ -409,7 +410,8 @@ export default function Insumos() {
       vencimiento_inicial: '',
       lote_nuevo: '',
       vencimiento_nuevo: '',
-      cantidad_nueva: ''
+      cantidad_nueva: '',
+      stock_total_manual: insumo.stock_total ?? ''
     });
     setEditingId(insumo._id);
     setDialogOpen(true);
@@ -435,7 +437,10 @@ export default function Insumos() {
           ? form.categoria._id
           : form.categoria || null,
       stock_minimo: form.stock_minimo === '' ? 0 : Number(form.stock_minimo),
-      alerta_vencimiento_dias: form.alerta_vencimiento_dias === '' ? 7 : Number(form.alerta_vencimiento_dias)
+      alerta_vencimiento_dias: form.alerta_vencimiento_dias === '' ? 7 : Number(form.alerta_vencimiento_dias),
+      ...(editingId && form.stock_total_manual !== ''
+        ? { stock_total: Number(form.stock_total_manual) }
+        : {})
     };
 
     try {
@@ -1146,6 +1151,12 @@ export default function Insumos() {
             />
             {editingId && (
               <>
+                <TextField
+                  label="Stock actual"
+                  type="number"
+                  value={form.stock_total_manual}
+                  onChange={(e) => setForm((prev) => ({ ...prev, stock_total_manual: e.target.value }))}
+                />
                 <Typography variant="subtitle2" color="text.secondary">
                   Registrar lote (opcional)
                 </Typography>
