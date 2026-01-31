@@ -6,14 +6,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   MenuItem,
   Stack,
   TextField,
-  Tooltip,
   Typography
 } from '@mui/material';
-import InfoIcon from '@mui/icons-material/InfoOutlined';
 import {
   obtenerLotesInsumo,
   obtenerMovimientosInsumo,
@@ -26,7 +23,6 @@ const buildEmptyForm = (tipo) => ({
   loteId: '',
   lote: '',
   fecha_vencimiento: '',
-  motivo: '',
   nota: ''
 });
 
@@ -37,10 +33,8 @@ export default function MovimientoDialog({
   lotes,
   tipoFijo,
   tipoInicial,
-  isMobile,
   onInfo,
   onError,
-  onShowDesc,
   onRefreshInsumos,
   onUpdateMovimientos,
   onUpdateLotes
@@ -67,7 +61,6 @@ export default function MovimientoDialog({
       loteId: form.loteId || undefined,
       lote: form.lote || undefined,
       fecha_vencimiento: form.fecha_vencimiento || undefined,
-      motivo: form.motivo || undefined,
       nota: form.nota || undefined
     };
     try {
@@ -146,30 +139,6 @@ export default function MovimientoDialog({
               ))}
             </TextField>
           )}
-          <TextField
-            label="Motivo"
-            value={form.motivo}
-            onChange={(e) => setForm((prev) => ({ ...prev, motivo: e.target.value }))}
-            InputProps={{
-              endAdornment: (
-                <Tooltip
-                  title="Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste)."
-                  arrow
-                  disableHoverListener={isMobile}
-                >
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      if (!isMobile) return;
-                      onShowDesc?.('Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste).');
-                    }}
-                  >
-                    <InfoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )
-            }}
-          />
           <TextField
             label="Nota (opcional)"
             value={form.nota}

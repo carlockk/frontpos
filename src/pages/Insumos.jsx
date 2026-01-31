@@ -140,10 +140,6 @@ export default function Insumos() {
   const [visibleCount, setVisibleCount] = useState(50);
   const tableContainerRef = useRef(null);
 
-  const handleShowDesc = (texto) => {
-    setDescTexto(texto);
-    setDescOpen(true);
-  };
 
   const fetchInsumos = async () => {
     setLoading(true);
@@ -541,10 +537,9 @@ export default function Insumos() {
     return movimientos.filter((mov) => {
       if (movTab && mov.tipo !== movTab) return false;
       if (texto) {
-        const motivo = (mov.motivo || '').toLowerCase();
         const lote = (mov.lote || '').toLowerCase();
         const nota = (mov.nota || '').toLowerCase();
-        if (!motivo.includes(texto) && !lote.includes(texto) && !nota.includes(texto)) return false;
+        if (!lote.includes(texto) && !nota.includes(texto)) return false;
       }
       if (inicioDate && finDate) {
         const fecha = new Date(mov.fecha);
@@ -563,10 +558,9 @@ export default function Insumos() {
     return histMovimientos.filter((mov) => {
       if (histTab && mov.tipo !== histTab) return false;
       if (texto) {
-        const motivo = (mov.motivo || '').toLowerCase();
         const lote = (mov.lote || '').toLowerCase();
         const nota = (mov.nota || '').toLowerCase();
-        if (!motivo.includes(texto) && !lote.includes(texto) && !nota.includes(texto)) return false;
+        if (!lote.includes(texto) && !nota.includes(texto)) return false;
       }
       if (inicioDate && finDate) {
         const fecha = new Date(mov.fecha);
@@ -1325,10 +1319,8 @@ export default function Insumos() {
         lotes={lotes}
         tipoFijo={movTipoFijo}
         tipoInicial={movTab}
-        isMobile={isMobile}
         onInfo={setInfo}
         onError={setError}
-        onShowDesc={handleShowDesc}
         onRefreshInsumos={fetchInsumos}
         onUpdateMovimientos={setMovimientos}
         onUpdateLotes={setLotes}
@@ -1373,7 +1365,7 @@ export default function Insumos() {
             </Tabs>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Buscar por motivo/lote/nota"
+                label="Buscar por lote/nota"
                 value={histBusqueda}
                 onChange={(e) => setHistBusqueda(e.target.value)}
                 size="small"
@@ -1419,7 +1411,6 @@ export default function Insumos() {
                     {histInsumoId === '' && <TableCell>Insumo</TableCell>}
                     <TableCell>Tipo</TableCell>
                     <TableCell>Cantidad</TableCell>
-                    <TableCell>Motivo</TableCell>
                     <TableCell>Nota</TableCell>
                   </TableRow>
                 </TableHead>
@@ -1432,7 +1423,6 @@ export default function Insumos() {
                       )}
                       <TableCell>{mov.tipo}</TableCell>
                       <TableCell>{mov.cantidad}</TableCell>
-                      <TableCell>{mov.motivo || '-'}</TableCell>
                       <TableCell>
                         {mov.nota ? (
                           <Tooltip title={mov.nota} arrow disableHoverListener={isMobile}>
