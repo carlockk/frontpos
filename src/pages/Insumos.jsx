@@ -45,6 +45,7 @@ import {
   obtenerInsumos,
   eliminarInsumo,
   actualizarEstadoInsumo,
+  actualizarNotaInsumo,
   obtenerLocales,
   obtenerUsuarios,
   obtenerLotesInsumo,
@@ -185,6 +186,19 @@ export default function Insumos() {
       fetchInsumos();
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo actualizar el insumo.');
+    }
+  };
+
+  const handleLimpiarNota = async (insumoId) => {
+    if (!isAdmin) return;
+    const confirmar = window.confirm('Seguro que deseas borrar la nota rápida de este insumo?');
+    if (!confirmar) return;
+    try {
+      await actualizarNotaInsumo(insumoId, { nota: '' });
+      setInfo('Nota eliminada.');
+      fetchInsumos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar la nota.');
     }
   };
 
@@ -851,18 +865,30 @@ export default function Insumos() {
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="body2">{insumo.nombre}</Typography>
                                     {insumo.ultima_nota && (
-                                      <Tooltip title={insumo.ultima_nota} arrow disableHoverListener={isMobile}>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => {
-                                            if (!isMobile) return;
-                                            setDescTexto(insumo.ultima_nota);
-                                            setDescOpen(true);
-                                          }}
-                                        >
-                                          <InfoIcon fontSize="small" />
-                                        </IconButton>
-                                      </Tooltip>
+                                      <>
+                                        <Tooltip title={insumo.ultima_nota} arrow disableHoverListener={isMobile}>
+                                          <IconButton
+                                            size="small"
+                                            onClick={() => {
+                                              if (!isMobile) return;
+                                              setDescTexto(insumo.ultima_nota);
+                                              setDescOpen(true);
+                                            }}
+                                          >
+                                            <InfoIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                        {isAdmin && (
+                                          <Tooltip title="Borrar nota" arrow>
+                                            <IconButton
+                                              size="small"
+                                              onClick={() => handleLimpiarNota(insumo._id)}
+                                            >
+                                              <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                          </Tooltip>
+                                        )}
+                                      </>
                                     )}
                                   </Stack>
                                 </TableCell>
