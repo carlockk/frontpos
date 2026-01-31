@@ -35,14 +35,14 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RestoreIcon from '@mui/icons-material/Restore';
-import DatePicker, { DateObject } from 'react-multi-date-picker';
+import DatePicker from 'react-multi-date-picker';
 import { useTheme } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../context/AuthContext';
+import InsumoDialog from './insumos/InsumoDialog';
+import MovimientoDialog from './insumos/MovimientoDialog';
 import {
   obtenerInsumos,
-  crearInsumo,
-  editarInsumo,
   eliminarInsumo,
   actualizarEstadoInsumo,
   obtenerLocales,
@@ -51,10 +51,8 @@ import {
   eliminarLoteInsumo,
   eliminarLotesInsumo,
   actualizarEstadoLoteInsumo,
-  crearLoteInsumo,
   obtenerMovimientosInsumo,
   obtenerMovimientosInsumos,
-  registrarMovimientoInsumo,
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
   enviarResumenAlertasInsumos,
@@ -66,28 +64,6 @@ import {
   eliminarCategoriaInsumo,
   actualizarOrdenCategoriasInsumo
 } from '../services/api';
-
-const emptyForm = {
-  nombre: '',
-  descripcion: '',
-  unidad: 'unid',
-  categoria: '',
-  stock_minimo: '',
-  alerta_vencimiento_dias: '7',
-  stock_inicial: '',
-  lote_inicial: '',
-  vencimiento_inicial: '',
-  lote_nuevo: '',
-  vencimiento_nuevo: '',
-  cantidad_nueva: '',
-  stock_total_manual: ''
-};
-
-const unidades = [
-  { value: 'unid', label: 'Unidad' },
-  { value: 'kg', label: 'Kilogramo' },
-  { value: 'lt', label: 'Litro' }
-];
 
 const estadoVencimiento = (lote, alertaDias) => {
   if (!lote?.fecha_vencimiento) return 'normal';
@@ -113,8 +89,7 @@ export default function Insumos() {
   const [info, setInfo] = useState('');
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [editingInsumo, setEditingInsumo] = useState(null);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -165,15 +140,10 @@ export default function Insumos() {
   const [visibleCount, setVisibleCount] = useState(50);
   const tableContainerRef = useRef(null);
 
-  const [movForm, setMovForm] = useState({
-    tipo: 'entrada',
-    cantidad: '',
-    loteId: '',
-    lote: '',
-    fecha_vencimiento: '',
-    motivo: '',
-    nota: ''
-  });
+  const handleShowDesc = (texto) => {
+    setDescTexto(texto);
+    setDescOpen(true);
+  };
 
   const fetchInsumos = async () => {
     setLoading(true);
@@ -229,8 +199,7 @@ export default function Insumos() {
   };
 
   const openCreate = () => {
-    setForm(emptyForm);
-    setEditingId(null);
+    setEditingInsumo(null);
     setDialogOpen(true);
     setError('');
     setInfo('');
@@ -407,84 +376,10 @@ export default function Insumos() {
   };
 
   const openEdit = (insumo) => {
-    setForm({
-      nombre: insumo.nombre || '',
-      descripcion: insumo.descripcion || '',
-      unidad: insumo.unidad || 'unid',
-      categoria: insumo.categoria?._id || '',
-      stock_minimo: insumo.stock_minimo ?? '',
-      alerta_vencimiento_dias: insumo.alerta_vencimiento_dias ?? '7',
-      stock_inicial: '',
-      lote_inicial: '',
-      vencimiento_inicial: '',
-      lote_nuevo: '',
-      vencimiento_nuevo: '',
-      cantidad_nueva: '',
-      stock_total_manual: insumo.stock_total ?? ''
-    });
-    setEditingId(insumo._id);
+    setEditingInsumo(insumo);
     setDialogOpen(true);
     setError('');
     setInfo('');
-  };
-
-  const handleSave = async () => {
-    setError('');
-    setInfo('');
-
-    if (!form.nombre.trim() || !form.unidad) {
-      setError('Nombre y unidad son obligatorios.');
-      return;
-    }
-
-    const payload = {
-      nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim(),
-      unidad: form.unidad,
-      categoria:
-        form.categoria && typeof form.categoria === 'object'
-          ? form.categoria._id
-          : form.categoria || null,
-      stock_minimo: form.stock_minimo === '' ? 0 : Number(form.stock_minimo),
-      alerta_vencimiento_dias: form.alerta_vencimiento_dias === '' ? 7 : Number(form.alerta_vencimiento_dias),
-      ...(editingId && form.stock_total_manual !== ''
-        ? { stock_total: Number(form.stock_total_manual) }
-        : {})
-    };
-
-    try {
-      if (editingId) {
-        const tieneLoteNuevo = form.lote_nuevo.trim() || form.vencimiento_nuevo;
-        await editarInsumo(editingId, payload);
-        if (tieneLoteNuevo) {
-          await crearLoteInsumo(editingId, {
-            lote: form.lote_nuevo.trim() || undefined,
-            fecha_vencimiento: form.vencimiento_nuevo || undefined,
-            cantidad: form.cantidad_nueva === '' ? 0 : Number(form.cantidad_nueva)
-          });
-        }
-        setInfo('Insumo actualizado.');
-      } else {
-        const creado = await crearInsumo(payload);
-        const stockInicial = Number(form.stock_inicial);
-        if (Number.isFinite(stockInicial) && stockInicial > 0) {
-          await registrarMovimientoInsumo(creado.data._id, {
-            tipo: 'entrada',
-            cantidad: stockInicial,
-            lote: form.lote_inicial || undefined,
-            fecha_vencimiento: form.vencimiento_inicial || undefined,
-            motivo: 'Stock inicial'
-          });
-        }
-        setInfo('Insumo creado.');
-      }
-      setDialogOpen(false);
-      setEditingId(null);
-      setForm(emptyForm);
-      fetchInsumos();
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo guardar el insumo.');
-    }
   };
 
   const confirmDelete = (insumo) => {
@@ -582,15 +477,6 @@ export default function Insumos() {
       setMovTab('entrada');
       setMovBusqueda('');
       setMovFechas([]);
-      setMovForm({
-        tipo: 'entrada',
-        cantidad: '',
-        loteId: '',
-        lote: '',
-        fecha_vencimiento: '',
-        motivo: '',
-        nota: ''
-      });
       setMovOpen(true);
     } catch (err) {
       setError('No se pudieron cargar los movimientos.');
@@ -631,56 +517,9 @@ export default function Insumos() {
       setMovTab(tipo);
       setMovBusqueda('');
       setMovFechas([]);
-      setMovForm({
-        tipo,
-        cantidad: '',
-        loteId: '',
-        lote: '',
-        fecha_vencimiento: '',
-        motivo: '',
-        nota: ''
-      });
       setMovOpen(true);
     } catch (err) {
       setError('No se pudieron cargar los movimientos.');
-    }
-  };
-
-  const handleMovimiento = async () => {
-    if (!movInsumo) return;
-    const cantidad = Number(movForm.cantidad);
-    if (!Number.isFinite(cantidad) || cantidad <= 0) {
-      setError('Ingresa una cantidad válida.');
-      return;
-    }
-    const payload = {
-      tipo: movForm.tipo,
-      cantidad,
-      loteId: movForm.loteId || undefined,
-      lote: movForm.lote || undefined,
-      fecha_vencimiento: movForm.fecha_vencimiento || undefined,
-      motivo: movForm.motivo || undefined,
-      nota: movForm.nota || undefined
-    };
-    try {
-      await registrarMovimientoInsumo(movInsumo._id, payload);
-      setInfo('Movimiento registrado.');
-      setMovForm({
-        tipo: 'entrada',
-        cantidad: '',
-        loteId: '',
-        lote: '',
-        fecha_vencimiento: '',
-        motivo: '',
-        nota: ''
-      });
-      fetchInsumos();
-      const res = await obtenerMovimientosInsumo(movInsumo._id);
-      setMovimientos(res.data || []);
-      const lotesRes = await obtenerLotesInsumo(movInsumo._id);
-      setLotes(lotesRes.data || []);
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo registrar el movimiento.');
     }
   };
 
@@ -1192,121 +1031,16 @@ export default function Insumos() {
         </TableContainer>
       </Paper>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{editingId ? 'Editar insumo' : 'Crear insumo'}</DialogTitle>
-        <DialogContent dividers>
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={form.nombre}
-              onChange={(e) => setForm((prev) => ({ ...prev, nombre: e.target.value }))}
-              required
-            />
-            <TextField
-              label="Descripcion"
-              value={form.descripcion}
-              onChange={(e) => setForm((prev) => ({ ...prev, descripcion: e.target.value }))}
-              multiline
-              minRows={2}
-            />
-            <TextField
-              select
-              label="Unidad"
-              value={form.unidad}
-              onChange={(e) => setForm((prev) => ({ ...prev, unidad: e.target.value }))}
-            >
-              {unidades.map((u) => (
-                <MenuItem key={u.value} value={u.value}>
-                  {u.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Categoria (opcional)"
-              value={form.categoria}
-              onChange={(e) => setForm((prev) => ({ ...prev, categoria: e.target.value }))}
-            >
-              <MenuItem value="">Sin categoria</MenuItem>
-              {categoriasInsumo.map((cat) => (
-                <MenuItem key={cat._id} value={cat._id}>
-                  {cat.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Stock minimo"
-              type="number"
-              value={form.stock_minimo}
-              onChange={(e) => setForm((prev) => ({ ...prev, stock_minimo: e.target.value }))}
-            />
-            <TextField
-              label="Dias alerta vencimiento"
-              type="number"
-              value={form.alerta_vencimiento_dias}
-              onChange={(e) => setForm((prev) => ({ ...prev, alerta_vencimiento_dias: e.target.value }))}
-            />
-            {editingId && (
-              <>
-                <TextField
-                  label="Stock actual"
-                  type="number"
-                  value={form.stock_total_manual}
-                  onChange={(e) => setForm((prev) => ({ ...prev, stock_total_manual: e.target.value }))}
-                />
-                <Typography variant="subtitle2" color="text.secondary">
-                  Registrar lote (opcional)
-                </Typography>
-                <TextField
-                  label="Lote"
-                  value={form.lote_nuevo}
-                  onChange={(e) => setForm((prev) => ({ ...prev, lote_nuevo: e.target.value }))}
-                />
-                <TextField
-                  label="Fecha vencimiento"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.vencimiento_nuevo}
-                  onChange={(e) => setForm((prev) => ({ ...prev, vencimiento_nuevo: e.target.value }))}
-                />
-                <TextField
-                  label="Cantidad (opcional si defines lote/fecha)"
-                  type="number"
-                  value={form.cantidad_nueva}
-                  onChange={(e) => setForm((prev) => ({ ...prev, cantidad_nueva: e.target.value }))}
-                />
-              </>
-            )}
-            {!editingId && (
-              <>
-                <TextField
-                  label="Stock inicial (opcional)"
-                  type="number"
-                  value={form.stock_inicial}
-                  onChange={(e) => setForm((prev) => ({ ...prev, stock_inicial: e.target.value }))}
-                />
-                <TextField
-                  label="Lote inicial (opcional)"
-                  value={form.lote_inicial}
-                  onChange={(e) => setForm((prev) => ({ ...prev, lote_inicial: e.target.value }))}
-                />
-                <TextField
-                  label="Vencimiento inicial (opcional)"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={form.vencimiento_inicial}
-                  onChange={(e) => setForm((prev) => ({ ...prev, vencimiento_inicial: e.target.value }))}
-                />
-              </>
-            )}
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSave}>Guardar</Button>
-        </DialogActions>
-      </Dialog>
+      <InsumoDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        insumo={editingInsumo}
+        categorias={categoriasInsumo}
+        externalError={error}
+        onInfo={setInfo}
+        onError={setError}
+        onSaved={fetchInsumos}
+      />
 
       <Dialog open={alertOpen} onClose={() => setAlertOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Configurar alertas de insumos</DialogTitle>
@@ -1584,110 +1318,21 @@ export default function Insumos() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={movOpen} onClose={() => setMovOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Movimientos - {movInsumo?.nombre}</DialogTitle>
-        <DialogContent dividers>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {!movTipoFijo ? (
-              <TextField
-                select
-                label="Tipo"
-                value={movForm.tipo}
-                onChange={(e) => setMovForm((prev) => ({ ...prev, tipo: e.target.value }))}
-              >
-                <MenuItem value="entrada">Entrada</MenuItem>
-                <MenuItem value="salida">Salida</MenuItem>
-              </TextField>
-            ) : (
-              <TextField
-                label="Tipo"
-                value={movForm.tipo === 'entrada' ? 'Entrada' : 'Salida'}
-                disabled
-              />
-            )}
-            <TextField
-              label="Cantidad"
-              type="number"
-              value={movForm.cantidad}
-              onChange={(e) => setMovForm((prev) => ({ ...prev, cantidad: e.target.value }))}
-            />
-            {movForm.tipo === 'entrada' && (
-              <>
-                <TextField
-                  label="Lote (opcional)"
-                  value={movForm.lote}
-                  onChange={(e) => setMovForm((prev) => ({ ...prev, lote: e.target.value }))}
-                />
-                <TextField
-                  label="Fecha vencimiento (opcional)"
-                  type="date"
-                  InputLabelProps={{ shrink: true }}
-                  value={movForm.fecha_vencimiento}
-                  onChange={(e) => setMovForm((prev) => ({ ...prev, fecha_vencimiento: e.target.value }))}
-                />
-              </>
-            )}
-            {movForm.tipo === 'salida' && (
-              <TextField
-                select
-                label="Lote"
-                value={movForm.loteId}
-                onChange={(e) => setMovForm((prev) => ({ ...prev, loteId: e.target.value }))}
-              >
-                <MenuItem value="">FIFO automatico</MenuItem>
-                {lotes.map((lote) => (
-                  <MenuItem key={lote._id} value={lote._id}>
-                    {lote.lote || lote._id} ({lote.cantidad})
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-            <TextField
-              label="Motivo"
-              value={movForm.motivo}
-              onChange={(e) => setMovForm((prev) => ({ ...prev, motivo: e.target.value }))}
-              InputProps={{
-                endAdornment: (
-                  <Tooltip
-                    title="Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste)."
-                    arrow
-                    disableHoverListener={isMobile}
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        if (!isMobile) return;
-                        setDescTexto('Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste).');
-                        setDescOpen(true);
-                      }}
-                    >
-                      <InfoIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                )
-              }}
-            />
-            <TextField
-              label="Nota (opcional)"
-              value={movForm.nota}
-              onChange={(e) => setMovForm((prev) => ({ ...prev, nota: e.target.value }))}
-              multiline
-              minRows={2}
-            />
-            <Button variant="contained" onClick={handleMovimiento}>
-              Registrar movimiento
-            </Button>
-          </Stack>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              El historial completo está disponible en “Ver historial de E/S”.
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setMovOpen(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+      <MovimientoDialog
+        open={movOpen}
+        onClose={() => setMovOpen(false)}
+        insumo={movInsumo}
+        lotes={lotes}
+        tipoFijo={movTipoFijo}
+        tipoInicial={movTab}
+        isMobile={isMobile}
+        onInfo={setInfo}
+        onError={setError}
+        onShowDesc={handleShowDesc}
+        onRefreshInsumos={fetchInsumos}
+        onUpdateMovimientos={setMovimientos}
+        onUpdateLotes={setLotes}
+      />
 
       <Dialog
         open={histOpen}
