@@ -35,12 +35,12 @@ import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import RestoreIcon from '@mui/icons-material/Restore';
-import DatePicker from 'react-multi-date-picker';
 import { useTheme } from '@mui/material/styles';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { useAuth } from '../context/AuthContext';
 import InsumoDialog from './insumos/InsumoDialog';
 import MovimientoDialog from './insumos/MovimientoDialog';
+import HistorialDialog from './insumos/HistorialDialog';
 import {
   obtenerInsumos,
   eliminarInsumo,
@@ -51,10 +51,6 @@ import {
   eliminarLoteInsumo,
   eliminarLotesInsumo,
   actualizarEstadoLoteInsumo,
-  obtenerMovimientosInsumo,
-  obtenerMovimientosInsumos,
-  eliminarMovimientoInsumo,
-  eliminarMovimientosInsumos,
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
   enviarResumenAlertasInsumos,
@@ -111,11 +107,6 @@ export default function Insumos() {
   const [movBusqueda, setMovBusqueda] = useState('');
   const [movFechas, setMovFechas] = useState([]);
   const [histOpen, setHistOpen] = useState(false);
-  const [histInsumoId, setHistInsumoId] = useState('');
-  const [histMovimientos, setHistMovimientos] = useState([]);
-  const [histTab, setHistTab] = useState('entrada');
-  const [histBusqueda, setHistBusqueda] = useState('');
-  const [histFechas, setHistFechas] = useState([]);
   const [soloBajoMinimo, setSoloBajoMinimo] = useState(false);
   const [mostrarInsumosOcultos, setMostrarInsumosOcultos] = useState(false);
   const [alertOpen, setAlertOpen] = useState(false);
@@ -484,66 +475,6 @@ export default function Insumos() {
 
   const openHistorial = () => {
     setHistOpen(true);
-    setHistInsumoId('');
-    setHistMovimientos([]);
-    setHistTab('entrada');
-    setHistBusqueda('');
-    setHistFechas([]);
-  };
-
-  useEffect(() => {
-    if (!histInsumoId) {
-      obtenerMovimientosInsumos()
-        .then((res) => setHistMovimientos(res.data || []))
-        .catch(() => setHistMovimientos([]));
-      return;
-    }
-    obtenerMovimientosInsumo(histInsumoId)
-      .then((res) => setHistMovimientos(res.data || []))
-      .catch(() => setHistMovimientos([]));
-  }, [histInsumoId]);
-
-  const recargarHistorial = async (insumoId) => {
-    try {
-      if (insumoId) {
-        const res = await obtenerMovimientosInsumo(insumoId);
-        setHistMovimientos(res.data || []);
-      } else {
-        const res = await obtenerMovimientosInsumos();
-        setHistMovimientos(res.data || []);
-      }
-    } catch {
-      setHistMovimientos([]);
-    }
-  };
-
-  const handleEliminarMovimientoHist = async (movId) => {
-    if (!isSuperadmin) return;
-    const confirmar = window.confirm('Seguro que deseas eliminar este movimiento del historial?');
-    if (!confirmar) return;
-    try {
-      await eliminarMovimientoInsumo(movId);
-      setInfo('Movimiento eliminado.');
-      recargarHistorial(histInsumoId);
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo eliminar el movimiento.');
-    }
-  };
-
-  const handleEliminarHistorial = async () => {
-    if (!isSuperadmin) return;
-    const mensaje = histInsumoId
-      ? 'Seguro que deseas eliminar todo el historial de este insumo?'
-      : 'Seguro que deseas eliminar todo el historial de movimientos?';
-    const confirmar = window.confirm(mensaje);
-    if (!confirmar) return;
-    try {
-      await eliminarMovimientosInsumos(histInsumoId ? { insumo: histInsumoId } : {});
-      setInfo('Historial eliminado.');
-      recargarHistorial(histInsumoId);
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo eliminar el historial.');
-    }
   };
 
   const openMovimientoTipo = async (insumo, tipo) => {
@@ -594,27 +525,6 @@ export default function Insumos() {
       return true;
     });
   }, [movimientos, movTab, movBusqueda, movFechas]);
-
-  const historialFiltrado = useMemo(() => {
-    const texto = histBusqueda.trim().toLowerCase();
-    const [inicio, fin] = histFechas;
-    const inicioDate = inicio ? new Date(inicio.toDate()) : null;
-    const finDate = fin ? new Date(fin.toDate()) : null;
-
-    return histMovimientos.filter((mov) => {
-      if (histTab && mov.tipo !== histTab) return false;
-      if (texto) {
-        const lote = (mov.lote || '').toLowerCase();
-        const nota = (mov.nota || '').toLowerCase();
-        if (!lote.includes(texto) && !nota.includes(texto)) return false;
-      }
-      if (inicioDate && finDate) {
-        const fecha = new Date(mov.fecha);
-        if (fecha < inicioDate || fecha > finDate) return false;
-      }
-      return true;
-    });
-  }, [histMovimientos, histTab, histBusqueda, histFechas]);
 
   const insumosFiltrados = useMemo(() => {
     return insumos.filter((insumo) => {
@@ -1372,154 +1282,19 @@ export default function Insumos() {
         onUpdateLotes={setLotes}
       />
 
-      <Dialog
+      <HistorialDialog
         open={histOpen}
         onClose={() => setHistOpen(false)}
-        fullScreen={isMobile}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{
-          sx: !isMobile
-            ? { height: '90vh', display: 'flex', flexDirection: 'column' }
-            : {}
+        insumos={insumos}
+        isSuperadmin={isSuperadmin}
+        isMobile={isMobile}
+        onInfo={setInfo}
+        onError={setError}
+        onShowDesc={(texto) => {
+          setDescTexto(texto);
+          setDescOpen(true);
         }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Historial de Entradas/Salidas
-          <IconButton onClick={() => setHistOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={!isMobile ? { flex: 1, overflow: 'auto' } : {}}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              select
-              label="Insumo"
-              value={histInsumoId}
-              onChange={(e) => setHistInsumoId(e.target.value)}
-            >
-              <MenuItem value="">Todos los insumos</MenuItem>
-              {insumos.map((insumo) => (
-                <MenuItem key={insumo._id} value={insumo._id}>
-                  {insumo.nombre}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Tabs value={histTab} onChange={(_e, value) => setHistTab(value)}>
-              <Tab label="Entradas" value="entrada" />
-              <Tab label="Salidas" value="salida" />
-            </Tabs>
-            {isSuperadmin && (
-              <Button
-                variant="outlined"
-                color="error"
-                onClick={handleEliminarHistorial}
-                sx={{ alignSelf: 'flex-start' }}
-              >
-                {histInsumoId ? 'Eliminar historial del insumo' : 'Eliminar todo el historial'}
-              </Button>
-            )}
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField
-                label="Buscar por lote/nota"
-                value={histBusqueda}
-                onChange={(e) => setHistBusqueda(e.target.value)}
-                size="small"
-              />
-              <DatePicker
-                range
-                value={histFechas}
-                onChange={(dates) => setHistFechas([...dates])}
-                format="YYYY-MM-DD"
-                render={(value, openCalendar) => (
-                  <Box
-                    onClick={openCalendar}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      px: 1.25,
-                      py: 0.7,
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 1,
-                      minHeight: 36,
-                      cursor: 'pointer',
-                      color: '#6b7280'
-                    }}
-                  >
-                    <SearchIcon fontSize="small" />
-                    <Typography variant="body2">
-                      {value || 'Buscar por fecha'}
-                    </Typography>
-                  </Box>
-                )}
-              />
-            </Stack>
-          </Stack>
-          <Box sx={{ mt: 3 }}>
-            {historialFiltrado.length === 0 ? (
-              <Typography color="text.secondary">Sin movimientos.</Typography>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    {histInsumoId === '' && <TableCell>Insumo</TableCell>}
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Cantidad</TableCell>
-                    <TableCell>Nota</TableCell>
-                    {isSuperadmin && <TableCell align="right">Acciones</TableCell>}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {historialFiltrado.map((mov) => (
-                    <TableRow key={mov._id}>
-                      <TableCell>{new Date(mov.fecha).toLocaleString()}</TableCell>
-                      {histInsumoId === '' && (
-                        <TableCell>{mov.insumo?.nombre || '-'}</TableCell>
-                      )}
-                      <TableCell>{mov.tipo}</TableCell>
-                      <TableCell>{mov.cantidad}</TableCell>
-                      <TableCell>
-                        {mov.nota ? (
-                          <Tooltip title={mov.nota} arrow disableHoverListener={isMobile}>
-                            <IconButton
-                              size="small"
-                              onClick={() => {
-                                if (!isMobile) return;
-                                setDescTexto(mov.nota);
-                                setDescOpen(true);
-                              }}
-                            >
-                              <InfoIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        ) : (
-                          '-'
-                        )}
-                      </TableCell>
-                      {isSuperadmin && (
-                        <TableCell align="right">
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => handleEliminarMovimientoHist(mov._id)}
-                          >
-                            Eliminar
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHistOpen(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+      />
     </Box>
   );
 }
