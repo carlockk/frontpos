@@ -30,10 +30,18 @@ API.interceptors.request.use((config) => {
       role = typeof usuario?.rol === 'string' ? usuario.rol : '';
       userId = usuario?._id || '';
       if (role && role !== 'superadmin') {
-        localId = usuario?.local?._id || '';
+        if (typeof usuario?.local === 'string') {
+          localId = usuario.local;
+        } else {
+          localId = usuario?.local?._id || '';
+        }
       } else if (storedLocal) {
         const localParsed = JSON.parse(storedLocal);
-        localId = localParsed?._id || '';
+        if (typeof localParsed === 'string') {
+          localId = localParsed;
+        } else {
+          localId = localParsed?._id || '';
+        }
       }
     } catch (err) {
       // ignore parse errors

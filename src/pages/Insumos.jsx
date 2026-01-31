@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -162,6 +162,8 @@ export default function Insumos() {
   const [ordenarTabs, setOrdenarTabs] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [descTexto, setDescTexto] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
+  const tableContainerRef = useRef(null);
 
   const [movForm, setMovForm] = useState({
     tipo: 'entrada',
@@ -169,7 +171,8 @@ export default function Insumos() {
     loteId: '',
     lote: '',
     fecha_vencimiento: '',
-    motivo: ''
+    motivo: '',
+    nota: ''
   });
 
   const fetchInsumos = async () => {
@@ -585,7 +588,8 @@ export default function Insumos() {
         loteId: '',
         lote: '',
         fecha_vencimiento: '',
-        motivo: ''
+        motivo: '',
+        nota: ''
       });
       setMovOpen(true);
     } catch (err) {
@@ -633,7 +637,8 @@ export default function Insumos() {
         loteId: '',
         lote: '',
         fecha_vencimiento: '',
-        motivo: ''
+        motivo: '',
+        nota: ''
       });
       setMovOpen(true);
     } catch (err) {
@@ -654,7 +659,8 @@ export default function Insumos() {
       loteId: movForm.loteId || undefined,
       lote: movForm.lote || undefined,
       fecha_vencimiento: movForm.fecha_vencimiento || undefined,
-      motivo: movForm.motivo || undefined
+      motivo: movForm.motivo || undefined,
+      nota: movForm.nota || undefined
     };
     try {
       await registrarMovimientoInsumo(movInsumo._id, payload);
@@ -665,7 +671,8 @@ export default function Insumos() {
         loteId: '',
         lote: '',
         fecha_vencimiento: '',
-        motivo: ''
+        motivo: '',
+        nota: ''
       });
       fetchInsumos();
       const res = await obtenerMovimientosInsumo(movInsumo._id);
@@ -697,7 +704,8 @@ export default function Insumos() {
       if (texto) {
         const motivo = (mov.motivo || '').toLowerCase();
         const lote = (mov.lote || '').toLowerCase();
-        if (!motivo.includes(texto) && !lote.includes(texto)) return false;
+        const nota = (mov.nota || '').toLowerCase();
+        if (!motivo.includes(texto) && !lote.includes(texto) && !nota.includes(texto)) return false;
       }
       if (inicioDate && finDate) {
         const fecha = new Date(mov.fecha);
@@ -718,7 +726,8 @@ export default function Insumos() {
       if (texto) {
         const motivo = (mov.motivo || '').toLowerCase();
         const lote = (mov.lote || '').toLowerCase();
-        if (!motivo.includes(texto) && !lote.includes(texto)) return false;
+        const nota = (mov.nota || '').toLowerCase();
+        if (!motivo.includes(texto) && !lote.includes(texto) && !nota.includes(texto)) return false;
       }
       if (inicioDate && finDate) {
         const fecha = new Date(mov.fecha);
@@ -740,6 +749,22 @@ export default function Insumos() {
       return insumo.categoria?._id === tabCategoria;
     });
   }, [insumos, soloBajoMinimo, tabCategoria]);
+
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [soloBajoMinimo, tabCategoria, mostrarInsumosOcultos, insumos.length]);
+
+  useEffect(() => {
+    if (visibleCount >= insumosFiltrados.length) return;
+    const timer = setTimeout(() => {
+      setVisibleCount((prev) => Math.min(prev + 100, insumosFiltrados.length));
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [visibleCount, insumosFiltrados.length]);
+
+  const insumosPaginados = useMemo(() => {
+    return insumosFiltrados.slice(0, visibleCount);
+  }, [insumosFiltrados, visibleCount]);
 
   const insumosStockBajo = useMemo(
     () =>
@@ -962,8 +987,21 @@ export default function Insumos() {
         <TableContainer
           component={Paper}
           variant="outlined"
-          sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}
+          ref={tableContainerRef}
+          sx={{
+            backgroundColor: 'transparent',
+            boxShadow: 'none'
+          }}
         >
+          {insumosPaginados.length < insumosFiltrados.length ? (
+            <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 1, display: 'block' }}>
+              Cargando filas automaticamente... {insumosPaginados.length} de {insumosFiltrados.length}.
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ px: 1, pb: 1, display: 'block' }}>
+              Todas las filas han sido cargadas.
+            </Typography>
+          )}
           <DragDropContext onDragEnd={handleOrdenar}>
             <Table size="small">
               <TableHead>
@@ -989,11 +1027,16 @@ export default function Insumos() {
                         </TableCell>
                       </TableRow>
                     )}
-                    {insumosFiltrados.map((insumo, index) => {
+                    {insumosPaginados.map((insumo, index) => {
                         const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
                         const oculto = insumo.activo === false;
                         return (
-                          <Draggable key={insumo._id} draggableId={insumo._id} index={index} isDragDisabled={!isAdmin || ordenando}>
+                          <Draggable
+                            key={insumo._id}
+                            draggableId={insumo._id}
+                            index={index}
+                            isDragDisabled={!isAdmin || ordenando || insumosPaginados.length < insumosFiltrados.length}
+                          >
                             {(draggableProvided) => (
                               <TableRow
                                 ref={draggableProvided.innerRef}
@@ -1015,7 +1058,25 @@ export default function Insumos() {
                                     <DragIndicatorIcon fontSize="small" />
                                   </IconButton>
                                 </TableCell>
-                                <TableCell>{insumo.nombre}</TableCell>
+                                <TableCell>
+                                  <Stack direction="row" spacing={1} alignItems="center">
+                                    <Typography variant="body2">{insumo.nombre}</Typography>
+                                    {insumo.ultima_nota && (
+                                      <Tooltip title={insumo.ultima_nota} arrow disableHoverListener={isMobile}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            if (!isMobile) return;
+                                            setDescTexto(insumo.ultima_nota);
+                                            setDescOpen(true);
+                                          }}
+                                        >
+                                          <InfoIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Stack>
+                                </TableCell>
                                 <TableCell>
                                   <Tooltip title={insumo.descripcion || ''} placement="top" arrow disableHoverListener={isMobile}>
                                     <Typography
@@ -1585,6 +1646,33 @@ export default function Insumos() {
               label="Motivo"
               value={movForm.motivo}
               onChange={(e) => setMovForm((prev) => ({ ...prev, motivo: e.target.value }))}
+              InputProps={{
+                endAdornment: (
+                  <Tooltip
+                    title="Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste)."
+                    arrow
+                    disableHoverListener={isMobile}
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        if (!isMobile) return;
+                        setDescTexto('Breve descripcion del por que registras la entrada o salida (ej: compra proveedor, merma, ajuste).');
+                        setDescOpen(true);
+                      }}
+                    >
+                      <InfoIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )
+              }}
+            />
+            <TextField
+              label="Nota (opcional)"
+              value={movForm.nota}
+              onChange={(e) => setMovForm((prev) => ({ ...prev, nota: e.target.value }))}
+              multiline
+              minRows={2}
             />
             <Button variant="contained" onClick={handleMovimiento}>
               Registrar movimiento
@@ -1640,7 +1728,7 @@ export default function Insumos() {
             </Tabs>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
-                label="Buscar por motivo/lote"
+                label="Buscar por motivo/lote/nota"
                 value={histBusqueda}
                 onChange={(e) => setHistBusqueda(e.target.value)}
                 size="small"
@@ -1687,6 +1775,7 @@ export default function Insumos() {
                     <TableCell>Tipo</TableCell>
                     <TableCell>Cantidad</TableCell>
                     <TableCell>Motivo</TableCell>
+                    <TableCell>Nota</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1699,6 +1788,24 @@ export default function Insumos() {
                       <TableCell>{mov.tipo}</TableCell>
                       <TableCell>{mov.cantidad}</TableCell>
                       <TableCell>{mov.motivo || '-'}</TableCell>
+                      <TableCell>
+                        {mov.nota ? (
+                          <Tooltip title={mov.nota} arrow disableHoverListener={isMobile}>
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                if (!isMobile) return;
+                                setDescTexto(mov.nota);
+                                setDescOpen(true);
+                              }}
+                            >
+                              <InfoIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
