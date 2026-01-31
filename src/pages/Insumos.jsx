@@ -53,6 +53,8 @@ import {
   actualizarEstadoLoteInsumo,
   obtenerMovimientosInsumo,
   obtenerMovimientosInsumos,
+  eliminarMovimientoInsumo,
+  eliminarMovimientosInsumos,
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
   enviarResumenAlertasInsumos,
@@ -79,6 +81,7 @@ const estadoVencimiento = (lote, alertaDias) => {
 export default function Insumos() {
   const { usuario, selectedLocal } = useAuth();
   const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
+  const isSuperadmin = usuario?.rol === 'superadmin';
   const puedeEditar = isAdmin || usuario?.rol === 'cajero';
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -499,6 +502,49 @@ export default function Insumos() {
       .then((res) => setHistMovimientos(res.data || []))
       .catch(() => setHistMovimientos([]));
   }, [histInsumoId]);
+
+  const recargarHistorial = async (insumoId) => {
+    try {
+      if (insumoId) {
+        const res = await obtenerMovimientosInsumo(insumoId);
+        setHistMovimientos(res.data || []);
+      } else {
+        const res = await obtenerMovimientosInsumos();
+        setHistMovimientos(res.data || []);
+      }
+    } catch {
+      setHistMovimientos([]);
+    }
+  };
+
+  const handleEliminarMovimientoHist = async (movId) => {
+    if (!isSuperadmin) return;
+    const confirmar = window.confirm('Seguro que deseas eliminar este movimiento del historial?');
+    if (!confirmar) return;
+    try {
+      await eliminarMovimientoInsumo(movId);
+      setInfo('Movimiento eliminado.');
+      recargarHistorial(histInsumoId);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar el movimiento.');
+    }
+  };
+
+  const handleEliminarHistorial = async () => {
+    if (!isSuperadmin) return;
+    const mensaje = histInsumoId
+      ? 'Seguro que deseas eliminar todo el historial de este insumo?'
+      : 'Seguro que deseas eliminar todo el historial de movimientos?';
+    const confirmar = window.confirm(mensaje);
+    if (!confirmar) return;
+    try {
+      await eliminarMovimientosInsumos(histInsumoId ? { insumo: histInsumoId } : {});
+      setInfo('Historial eliminado.');
+      recargarHistorial(histInsumoId);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar el historial.');
+    }
+  };
 
   const openMovimientoTipo = async (insumo, tipo) => {
     try {
@@ -1363,6 +1409,16 @@ export default function Insumos() {
               <Tab label="Entradas" value="entrada" />
               <Tab label="Salidas" value="salida" />
             </Tabs>
+            {isSuperadmin && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleEliminarHistorial}
+                sx={{ alignSelf: 'flex-start' }}
+              >
+                {histInsumoId ? 'Eliminar historial del insumo' : 'Eliminar todo el historial'}
+              </Button>
+            )}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 label="Buscar por lote/nota"
@@ -1412,6 +1468,7 @@ export default function Insumos() {
                     <TableCell>Tipo</TableCell>
                     <TableCell>Cantidad</TableCell>
                     <TableCell>Nota</TableCell>
+                    {isSuperadmin && <TableCell align="right">Acciones</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1441,6 +1498,17 @@ export default function Insumos() {
                           '-'
                         )}
                       </TableCell>
+                      {isSuperadmin && (
+                        <TableCell align="right">
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => handleEliminarMovimientoHist(mov._id)}
+                          >
+                            Eliminar
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

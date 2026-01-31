@@ -172,6 +172,9 @@ export const obtenerMovimientosInsumos = (params) =>
   API.get('/insumos/movimientos', { params });
 export const registrarMovimientoInsumo = (id, data) =>
   API.post(`/insumos/${id}/movimientos`, data);
+export const eliminarMovimientoInsumo = (id) => API.delete(`/insumos/movimientos/${id}`);
+export const eliminarMovimientosInsumos = (params) =>
+  API.delete('/insumos/movimientos', { params });
 export const obtenerConfigAlertasInsumos = () => API.get('/insumos/alertas/config');
 export const guardarConfigAlertasInsumos = (data) => API.put('/insumos/alertas/config', data);
 export const enviarResumenAlertasInsumos = () => API.post('/insumos/alertas/resumen');
