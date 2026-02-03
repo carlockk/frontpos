@@ -41,6 +41,7 @@ import { useAuth } from '../context/AuthContext';
 import InsumoDialog from './insumos/InsumoDialog';
 import MovimientoDialog from './insumos/MovimientoDialog';
 import HistorialDialog from './insumos/HistorialDialog';
+import LotesDialog from './insumos/LotesDialog';
 import {
   obtenerInsumos,
   eliminarInsumo,
@@ -48,10 +49,7 @@ import {
   actualizarNotaInsumo,
   obtenerLocales,
   obtenerUsuarios,
-  obtenerLotesInsumo,
-  eliminarLoteInsumo,
-  eliminarLotesInsumo,
-  actualizarEstadoLoteInsumo,
+  obtenerMovimientosInsumo,
   obtenerConfigAlertasInsumos,
   guardarConfigAlertasInsumos,
   enviarResumenAlertasInsumos,
@@ -96,9 +94,6 @@ export default function Insumos() {
 
   const [lotesOpen, setLotesOpen] = useState(false);
   const [lotesInsumo, setLotesInsumo] = useState(null);
-  const [lotes, setLotes] = useState([]);
-  const [loteDeleteLoading, setLoteDeleteLoading] = useState(false);
-  const [mostrarLotesOcultos, setMostrarLotesOcultos] = useState(false);
 
   const [movOpen, setMovOpen] = useState(false);
   const [movimientos, setMovimientos] = useState([]);
@@ -407,69 +402,9 @@ export default function Insumos() {
     }
   };
 
-  const openLotes = async (insumo) => {
-    try {
-      const res = await obtenerLotesInsumo(insumo._id, {
-        incluir_ocultos: mostrarLotesOcultos ? 'true' : 'false'
-      });
-      setLotes(res.data || []);
-      setLotesInsumo(insumo);
-      setLotesOpen(true);
-    } catch (err) {
-      setError('No se pudieron cargar los lotes.');
-    }
-  };
-
-  const recargarLotes = async (insumoId, incluirOcultos) => {
-    const res = await obtenerLotesInsumo(insumoId, {
-      incluir_ocultos: incluirOcultos ? 'true' : 'false'
-    });
-    setLotes(res.data || []);
-  };
-
-  const handleEliminarLote = async (loteId) => {
-    if (!lotesInsumo) return;
-    const confirmar = window.confirm('Seguro que deseas eliminar este lote?');
-    if (!confirmar) return;
-    try {
-      setLoteDeleteLoading(true);
-      await eliminarLoteInsumo(lotesInsumo._id, loteId);
-      await recargarLotes(lotesInsumo._id, mostrarLotesOcultos);
-      fetchInsumos();
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo eliminar el lote.');
-    } finally {
-      setLoteDeleteLoading(false);
-    }
-  };
-
-  const handleOcultarLote = async (loteId, activo) => {
-    if (!lotesInsumo) return;
-    try {
-      setLoteDeleteLoading(true);
-      await actualizarEstadoLoteInsumo(lotesInsumo._id, loteId, { activo });
-      await recargarLotes(lotesInsumo._id, mostrarLotesOcultos);
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo actualizar el lote.');
-    } finally {
-      setLoteDeleteLoading(false);
-    }
-  };
-
-  const handleEliminarTodosLotes = async () => {
-    if (!lotesInsumo) return;
-    const confirmar = window.confirm('Seguro que deseas eliminar todos los lotes?');
-    if (!confirmar) return;
-    try {
-      setLoteDeleteLoading(true);
-      await eliminarLotesInsumo(lotesInsumo._id);
-      setLotes([]);
-      fetchInsumos();
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudieron eliminar los lotes.');
-    } finally {
-      setLoteDeleteLoading(false);
-    }
+  const openLotes = (insumo) => {
+    setLotesInsumo(insumo);
+    setLotesOpen(true);
   };
 
   const openMovimientos = async (insumo) => {
@@ -483,6 +418,7 @@ export default function Insumos() {
       setMovFechas([]);
       setMovOpen(true);
     } catch (err) {
+      console.error('Error al cargar movimientos:', err);
       setError('No se pudieron cargar los movimientos.');
     }
   };
@@ -493,12 +429,8 @@ export default function Insumos() {
 
   const openMovimientoTipo = async (insumo, tipo) => {
     try {
-      const [movRes, lotesRes] = await Promise.all([
-        obtenerMovimientosInsumo(insumo._id),
-        obtenerLotesInsumo(insumo._id)
-      ]);
+      const movRes = await obtenerMovimientosInsumo(insumo._id);
       setMovimientos(movRes.data || []);
-      setLotes(lotesRes.data || []);
       setMovInsumo(insumo);
       setMovTipoFijo(true);
       setMovTab(tipo);
@@ -506,18 +438,10 @@ export default function Insumos() {
       setMovFechas([]);
       setMovOpen(true);
     } catch (err) {
+      console.error('Error al cargar movimientos/lotes:', err);
       setError('No se pudieron cargar los movimientos.');
     }
   };
-
-  const estadosPorLote = useMemo(() => {
-    const map = new Map();
-    lotes.forEach((lote) => {
-      const estado = estadoVencimiento(lote, Number(lotesInsumo?.alerta_vencimiento_dias || 7));
-      map.set(lote._id, estado);
-    });
-    return map;
-  }, [lotes, lotesInsumo]);
 
   const movimientosFiltrados = useMemo(() => {
     const texto = movBusqueda.trim().toLowerCase();
@@ -944,7 +868,7 @@ export default function Insumos() {
                                       onClick={() => openMovimientoTipo(insumo, 'salida')}
                                       sx={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem', minWidth: 'auto', px: 0.5 }}
                                     >
-                                      Salida
+                                      Conteo físico
                                     </Button>
                                   </Stack>
                                 </TableCell>
@@ -1195,117 +1119,26 @@ export default function Insumos() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={lotesOpen} onClose={() => setLotesOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Lotes de {lotesInsumo?.nombre}</DialogTitle>
-        <DialogContent dividers>
-          {isAdmin && (
-            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              <Button
-                variant={mostrarLotesOcultos ? 'contained' : 'outlined'}
-                onClick={async () => {
-                  const next = !mostrarLotesOcultos;
-                  setMostrarLotesOcultos(next);
-                  if (lotesInsumo) {
-                    await recargarLotes(lotesInsumo._id, next);
-                  }
-                }}
-              >
-                {mostrarLotesOcultos ? 'Ocultos visibles' : 'Mostrar ocultos'}
-              </Button>
-              {lotes.length > 0 && (
-                <Button
-                  variant="outlined"
-                  color="error"
-                  onClick={handleEliminarTodosLotes}
-                  disabled={loteDeleteLoading}
-                >
-                  {loteDeleteLoading ? 'Eliminando...' : 'Eliminar todos los lotes'}
-                </Button>
-              )}
-            </Stack>
-          )}
-          {lotes.length === 0 ? (
-            <Typography color="text.secondary">No hay lotes registrados.</Typography>
-          ) : (
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Lote</TableCell>
-                  <TableCell>Vencimiento</TableCell>
-                  <TableCell>Cantidad</TableCell>
-                  <TableCell>Estado</TableCell>
-                  {isAdmin && <TableCell align="right">Acciones</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {lotes.map((lote) => {
-                  const estado = estadosPorLote.get(lote._id) || 'normal';
-                  const label =
-                    estado === 'vencido' ? 'Vencido' : estado === 'por_vencer' ? 'Por vencer' : 'Normal';
-                  const color =
-                    estado === 'vencido' ? 'error' : estado === 'por_vencer' ? 'warning' : 'success';
-                  const loteOculto = lote.activo === false;
-                  return (
-                    <TableRow key={lote._id}>
-                      <TableCell>{lote.lote || '-'}</TableCell>
-                      <TableCell>
-                        {lote.fecha_vencimiento
-                          ? new Date(lote.fecha_vencimiento).toLocaleDateString()
-                          : 'Sin vencimiento'}
-                      </TableCell>
-                      <TableCell>{lote.cantidad}</TableCell>
-                      <TableCell>
-                        <Chip size="small" color={color} label={label} />
-                        {isAdmin && loteOculto && (
-                          <Chip size="small" label="Oculto" sx={{ ml: 1 }} />
-                        )}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button
-                              size="small"
-                              color={lote.activo ? 'warning' : 'success'}
-                              onClick={() => handleOcultarLote(lote._id, !lote.activo)}
-                              disabled={loteDeleteLoading}
-                            >
-                              {lote.activo ? 'Ocultar' : 'Restaurar'}
-                            </Button>
-                            <Button
-                              size="small"
-                              color="error"
-                              onClick={() => handleEliminarLote(lote._id)}
-                              disabled={loteDeleteLoading}
-                            >
-                              Eliminar
-                            </Button>
-                          </Stack>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLotesOpen(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+      <LotesDialog
+        open={lotesOpen}
+        onClose={() => setLotesOpen(false)}
+        insumo={lotesInsumo}
+        isAdmin={isAdmin}
+        onError={setError}
+        onInfo={setInfo}
+        onRefreshInsumos={fetchInsumos}
+      />
 
       <MovimientoDialog
         open={movOpen}
         onClose={() => setMovOpen(false)}
         insumo={movInsumo}
-        lotes={lotes}
         tipoFijo={movTipoFijo}
         tipoInicial={movTab}
         onInfo={setInfo}
         onError={setError}
         onRefreshInsumos={fetchInsumos}
         onUpdateMovimientos={setMovimientos}
-        onUpdateLotes={setLotes}
       />
 
       <HistorialDialog

@@ -11,11 +11,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import {
-  obtenerLotesInsumo,
-  obtenerMovimientosInsumo,
-  registrarMovimientoInsumo
-} from '../../services/api';
+import { obtenerMovimientosInsumo, registrarMovimientoInsumo } from '../../services/api';
 
 const buildEmptyForm = (tipo) => ({
   tipo: tipo || 'entrada',
@@ -30,14 +26,12 @@ export default function MovimientoDialog({
   open,
   onClose,
   insumo,
-  lotes,
   tipoFijo,
   tipoInicial,
   onInfo,
   onError,
   onRefreshInsumos,
-  onUpdateMovimientos,
-  onUpdateLotes
+  onUpdateMovimientos
 }) {
   const [form, setForm] = useState(buildEmptyForm('entrada'));
   const [saving, setSaving] = useState(false);
@@ -51,17 +45,52 @@ export default function MovimientoDialog({
   const handleMovimiento = async () => {
     if (!insumo?._id) return;
     const cantidad = Number(form.cantidad);
-    if (!Number.isFinite(cantidad) || cantidad <= 0) {
+    const stockActual = Number(insumo?.stock_total || 0);
+    if (!Number.isFinite(cantidad) || cantidad < 0) {
       onError?.('Ingresa una cantidad válida.');
       return;
     }
+
+    let tipoFinal = form.tipo;
+    let cantidadFinal = cantidad;
+    let notaFinal = form.nota || '';
+    let loteId = form.loteId || undefined;
+    let lote = form.lote || undefined;
+    let fecha = form.fecha_vencimiento || undefined;
+
+    if (form.tipo === 'salida') {
+      const diferencia = Math.round((stockActual - cantidad) * 1000) / 1000;
+      if (diferencia === 0) {
+        onInfo?.('El conteo coincide con el stock. No se registró movimiento.');
+        return;
+      }
+      if (diferencia > 0) {
+        tipoFinal = 'salida';
+        cantidadFinal = diferencia;
+      } else {
+        tipoFinal = 'entrada';
+        cantidadFinal = Math.abs(diferencia);
+      }
+      const usado = Math.abs(diferencia);
+      const notaAuto = `Conteo físico. Stock final: ${cantidad}. Usado: ${usado}.`;
+      notaFinal = notaFinal ? `${notaFinal} | ${notaAuto}` : notaAuto;
+      loteId = undefined;
+      lote = undefined;
+      fecha = undefined;
+    } else {
+      if (cantidadFinal <= 0) {
+        onError?.('Ingresa una cantidad válida.');
+        return;
+      }
+    }
+
     const payload = {
-      tipo: form.tipo,
-      cantidad,
-      loteId: form.loteId || undefined,
-      lote: form.lote || undefined,
-      fecha_vencimiento: form.fecha_vencimiento || undefined,
-      nota: form.nota || undefined
+      tipo: tipoFinal,
+      cantidad: cantidadFinal,
+      loteId,
+      lote,
+      fecha_vencimiento: fecha,
+      nota: notaFinal || undefined
     };
     try {
       setSaving(true);
@@ -71,8 +100,6 @@ export default function MovimientoDialog({
       onRefreshInsumos?.();
       const res = await obtenerMovimientosInsumo(insumo._id);
       onUpdateMovimientos?.(res.data || []);
-      const lotesRes = await obtenerLotesInsumo(insumo._id);
-      onUpdateLotes?.(lotesRes.data || []);
     } catch (err) {
       onError?.(err?.response?.data?.error || 'No se pudo registrar el movimiento.');
     } finally {
@@ -82,7 +109,11 @@ export default function MovimientoDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Movimientos - {insumo?.nombre}</DialogTitle>
+      <DialogTitle>
+        {tipoFijo && tipoInicial === 'salida'
+          ? `Conteo físico - ${insumo?.nombre || ''}`
+          : `Movimientos - ${insumo?.nombre || ''}`}
+      </DialogTitle>
       <DialogContent dividers>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {!tipoFijo ? (
@@ -103,10 +134,11 @@ export default function MovimientoDialog({
             />
           )}
           <TextField
-            label="Cantidad"
+            label={form.tipo === 'salida' ? 'Existencia física' : 'Cantidad'}
             type="number"
             value={form.cantidad}
             onChange={(e) => setForm((prev) => ({ ...prev, cantidad: e.target.value }))}
+            helperText={form.tipo === 'salida' ? `Stock actual: ${Number(insumo?.stock_total || 0)}` : ''}
           />
           {form.tipo === 'entrada' && (
             <>
@@ -123,21 +155,6 @@ export default function MovimientoDialog({
                 onChange={(e) => setForm((prev) => ({ ...prev, fecha_vencimiento: e.target.value }))}
               />
             </>
-          )}
-          {form.tipo === 'salida' && (
-            <TextField
-              select
-              label="Lote"
-              value={form.loteId}
-              onChange={(e) => setForm((prev) => ({ ...prev, loteId: e.target.value }))}
-            >
-              <MenuItem value="">FIFO automatico</MenuItem>
-              {lotes.map((lote) => (
-                <MenuItem key={lote._id} value={lote._id}>
-                  {lote.lote || lote._id} ({lote.cantidad})
-                </MenuItem>
-              ))}
-            </TextField>
           )}
           <TextField
             label="Nota (opcional)"
