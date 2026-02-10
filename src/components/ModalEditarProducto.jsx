@@ -203,6 +203,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
             onChange={handleChange}
             label="Categoría"
           >
+            <MenuItem value="">Sin categoria</MenuItem>
             {categorias.map((cat) => (
               <MenuItem key={cat._id} value={cat._id}>
                 {cat.nombre}

@@ -215,6 +215,7 @@ export default function ProductoForm({ onSuccess, onCancel }) {
             value={form.categoria}
             onChange={handleChange}
           >
+            <MenuItem value="">Sin categoria</MenuItem>
             {categorias.map((cat) => (
               <MenuItem key={cat._id} value={cat._id}>
                 {cat.label || cat.nombre}
