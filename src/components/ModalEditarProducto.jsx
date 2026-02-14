@@ -50,6 +50,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
       setVariantes(
         (producto.variantes || []).map((v) => ({
           _id: v._id,
+          baseVarianteId: v.baseVarianteId || '',
           nombre: v.nombre || '',
           color: v.color || '',
           talla: v.talla || '',
@@ -122,7 +123,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
       onActualizado?.();
     } catch (err) {
       console.error(err);
-      setError('Error al guardar los cambios');
+      setError(err?.response?.data?.error || 'Error al guardar los cambios');
     } finally {
       setCargando(false);
     }
