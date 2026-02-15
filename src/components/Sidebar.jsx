@@ -30,6 +30,7 @@ import { obtenerLocales } from '../services/api';
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
 import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import InventoryOutlinedIcon from '@mui/icons-material/InventoryOutlined';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import PointOfSaleIcon from '@mui/icons-material/PointOfSaleOutlined';
 import HistoryIcon from '@mui/icons-material/HistoryOutlined';
 import StoreIcon from '@mui/icons-material/StoreOutlined';
@@ -222,6 +223,15 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             <ListItemButton component={Link} to="/insumos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
               <Box sx={{ mr: 2 }}><InventoryOutlinedIcon /></Box>
               <ListItemText primary="Insumos" />
+            </ListItemButton>
+          </ListItem>
+        )}
+
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin' || usuario?.rol === 'cajero') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/agregados" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><AddCircleOutlineIcon /></Box>
+              <ListItemText primary="Agregados" />
             </ListItemButton>
           </ListItem>
         )}

@@ -15,8 +15,8 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { useState, useEffect } from 'react';
-import { editarProducto, obtenerCategorias } from '../services/api';
+import { useState, useEffect, useMemo } from 'react';
+import { editarProducto, obtenerCategorias, obtenerOpcionesAgregados } from '../services/api';
 import VariantesForm from './VariantesForm';
 
 export default function ModalEditarProducto({ open, onClose, producto, onActualizado }) {
@@ -35,6 +35,10 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
   const [error, setError] = useState('');
   const [usaVariantes, setUsaVariantes] = useState(false);
   const [variantes, setVariantes] = useState([]);
+  const [gruposAgregados, setGruposAgregados] = useState([]);
+  const [agregadosOptions, setAgregadosOptions] = useState([]);
+  const [agregadosSeleccionados, setAgregadosSeleccionados] = useState([]);
+  const [gruposSeleccionados, setGruposSeleccionados] = useState([]);
 
   useEffect(() => {
     if (producto) {
@@ -59,6 +63,11 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
           stock: v.stock === 0 || v.stock ? String(v.stock) : ''
         }))
       );
+      const preseleccion = (producto.agregados || [])
+        .map((agg) => (typeof agg === 'object' ? agg._id : agg))
+        .filter(Boolean)
+        .map((id) => String(id));
+      setAgregadosSeleccionados(preseleccion);
       setImagenNueva(null);
       setError('');
     }
@@ -66,7 +75,51 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
 
   useEffect(() => {
     obtenerCategorias().then((res) => setCategorias(res.data));
+    obtenerOpcionesAgregados()
+      .then((res) => {
+        setGruposAgregados(res.data?.grupos || []);
+        setAgregadosOptions(res.data?.agregados || []);
+      })
+      .catch(() => {
+        setGruposAgregados([]);
+        setAgregadosOptions([]);
+      });
   }, []);
+
+  const agregadosByGrupo = useMemo(() => {
+    const map = new Map();
+    agregadosOptions.forEach((agg) => {
+      const key = agg.grupo || '';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(String(agg._id));
+    });
+    return map;
+  }, [agregadosOptions]);
+
+  useEffect(() => {
+    const groups = gruposAgregados
+      .filter((grupo) => {
+        const ids = agregadosByGrupo.get(String(grupo._id)) || [];
+        return ids.length > 0 && ids.every((id) => agregadosSeleccionados.includes(id));
+      })
+      .map((g) => String(g._id));
+    setGruposSeleccionados(groups);
+  }, [agregadosSeleccionados, gruposAgregados, agregadosByGrupo]);
+
+  const handleChangeAgregados = (value) => {
+    const ids = Array.from(new Set((value || []).map((id) => String(id))));
+    setAgregadosSeleccionados(ids);
+  };
+
+  const handleChangeGrupos = (value) => {
+    const groupIds = Array.from(new Set((value || []).map((id) => String(id))));
+    setGruposSeleccionados(groupIds);
+    const nextAgregados = new Set();
+    groupIds.forEach((gid) => {
+      (agregadosByGrupo.get(gid) || []).forEach((id) => nextAgregados.add(id));
+    });
+    setAgregadosSeleccionados(Array.from(nextAgregados));
+  };
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -114,6 +167,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
     } else {
       data.append('stock', form.stock !== '' ? parseInt(form.stock, 10) : '');
     }
+    data.append('agregados', JSON.stringify(agregadosSeleccionados));
 
     try {
       setCargando(true);
@@ -208,6 +262,40 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
             {categorias.map((cat) => (
               <MenuItem key={cat._id} value={cat._id}>
                 {cat.nombre}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mt: 2 }}>
+          <InputLabel id="grupo-agregados-label">Grupos de agregados</InputLabel>
+          <Select
+            labelId="grupo-agregados-label"
+            multiple
+            value={gruposSeleccionados}
+            onChange={(e) => handleChangeGrupos(e.target.value)}
+            label="Grupos de agregados"
+          >
+            {gruposAgregados.map((grupo) => (
+              <MenuItem key={grupo._id} value={grupo._id}>
+                {grupo.titulo}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl fullWidth sx={{ mt: 2 }}>
+          <InputLabel id="agregados-label">Agregados</InputLabel>
+          <Select
+            labelId="agregados-label"
+            multiple
+            value={agregadosSeleccionados}
+            onChange={(e) => handleChangeAgregados(e.target.value)}
+            label="Agregados"
+          >
+            {agregadosOptions.map((agg) => (
+              <MenuItem key={agg._id} value={agg._id}>
+                {agg.nombre}
               </MenuItem>
             ))}
           </Select>

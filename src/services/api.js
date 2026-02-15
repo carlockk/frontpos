@@ -90,6 +90,19 @@ export const editarProducto = (id, data) =>
   });
 
 // ─────────────────────────────────────────────
+// ➕ Agregados
+// ─────────────────────────────────────────────
+export const obtenerAgregados = () => API.get('/agregados');
+export const crearAgregado = (data) => API.post('/agregados', data);
+export const editarAgregado = (id, data) => API.put(`/agregados/${id}`, data);
+export const eliminarAgregado = (id) => API.delete(`/agregados/${id}`);
+export const obtenerOpcionesAgregados = () => API.get('/agregados/opciones');
+export const obtenerGruposAgregados = () => API.get('/agregados/grupos');
+export const crearGrupoAgregados = (data) => API.post('/agregados/grupos', data);
+export const editarGrupoAgregados = (id, data) => API.put(`/agregados/grupos/${id}`, data);
+export const eliminarGrupoAgregados = (id) => API.delete(`/agregados/grupos/${id}`);
+
+// ─────────────────────────────────────────────
 // 💸 Ventas
 // ─────────────────────────────────────────────
 export const registrarVenta = (data) => API.post('/ventas', data);
