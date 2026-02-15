@@ -37,6 +37,7 @@ import SettingsIcon from '@mui/icons-material/Tune';
 import BuscadorProducto from '../components/BuscadorProducto';
 import ModalCrearProducto from '../components/ModalCrearProducto';
 import SelectorVariantes from '../components/SelectorVariantes';
+import SelectorAgregadosDialog from '../components/SelectorAgregadosDialog';
 
 // ✅ Ahora usamos la base de archivos que sale de api.js
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
@@ -74,6 +75,7 @@ export default function POS() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [productoConVariantes, setProductoConVariantes] = useState(null);
+  const [productoConAgregados, setProductoConAgregados] = useState(null);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -211,14 +213,44 @@ export default function POS() {
       return;
     }
 
+    const agregadosActivos = Array.isArray(producto?.agregados)
+      ? producto.agregados.filter((agg) => agg?.nombre && agg?.activo !== false)
+      : [];
+
+    if (agregadosActivos.length > 0) {
+      setProductoConAgregados({ producto, variante: null });
+      return;
+    }
+
     agregarProducto(producto);
     setOpenCarrito(true);
   };
 
   const handleSeleccionVariante = (variante) => {
     if (!productoConVariantes) return;
+    const agregadosActivos = Array.isArray(productoConVariantes?.agregados)
+      ? productoConVariantes.agregados.filter((agg) => agg?.nombre && agg?.activo !== false)
+      : [];
+
+    if (agregadosActivos.length > 0) {
+      setProductoConAgregados({ producto: productoConVariantes, variante });
+      setProductoConVariantes(null);
+      return;
+    }
+
     agregarProducto(productoConVariantes, variante);
     setProductoConVariantes(null);
+    setOpenCarrito(true);
+  };
+
+  const handleConfirmarAgregados = (agregadosSeleccionados = []) => {
+    if (!productoConAgregados?.producto) return;
+    agregarProducto(
+      productoConAgregados.producto,
+      productoConAgregados.variante || null,
+      { agregados: agregadosSeleccionados }
+    );
+    setProductoConAgregados(null);
     setOpenCarrito(true);
   };
 
@@ -815,6 +847,13 @@ export default function POS() {
         producto={productoConVariantes}
         onClose={() => setProductoConVariantes(null)}
         onSelect={handleSeleccionVariante}
+      />
+      <SelectorAgregadosDialog
+        open={Boolean(productoConAgregados)}
+        producto={productoConAgregados?.producto}
+        variante={productoConAgregados?.variante}
+        onClose={() => setProductoConAgregados(null)}
+        onConfirm={handleConfirmarAgregados}
       />
       <Snackbar
         open={snackbarOpen}

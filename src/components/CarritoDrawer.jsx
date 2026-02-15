@@ -42,11 +42,13 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
       productoBaseId: p.productoBaseId || null,
       nombre: p.nombre,
       precio_unitario: p.precio,
+      precio_base: p.precioBase || null,
       cantidad: p.cantidad,
       observacion: p.observacion,
       varianteId: p.varianteId || null,
       varianteNombre: p.varianteNombre || '',
-      atributos: Array.isArray(p.atributos) ? p.atributos : []
+      atributos: Array.isArray(p.atributos) ? p.atributos : [],
+      agregados: Array.isArray(p.agregados) ? p.agregados : []
     }));
 
     try {
@@ -95,11 +97,13 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
       productoBaseId: p.productoBaseId || null,
       nombre: p.nombre,
       precio_unitario: p.precio,
+      precio_base: p.precioBase || null,
       cantidad: p.cantidad,
       observacion: p.observacion,
       varianteId: p.varianteId || null,
       varianteNombre: p.varianteNombre || '',
-      atributos: Array.isArray(p.atributos) ? p.atributos : []
+      atributos: Array.isArray(p.atributos) ? p.atributos : [],
+      agregados: Array.isArray(p.agregados) ? p.agregados : []
     }));
 
     try {
@@ -174,6 +178,16 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
                           sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1, px: 0.5 }}
                         >
                           {attr.nombre}: {attr.valor}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  )}
+                  {Array.isArray(item.agregados) && item.agregados.length > 0 && (
+                    <Stack spacing={0.25} mt={0.75}>
+                      {item.agregados.map((agg, idx) => (
+                        <Typography key={`${item.idCarrito}-agg-${idx}`} variant="caption" color="text.secondary">
+                          + {agg.nombre}
+                          {Number(agg.precio) > 0 ? ` ($${Number(agg.precio).toFixed(0)})` : ''}
                         </Typography>
                       ))}
                     </Stack>

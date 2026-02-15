@@ -164,6 +164,11 @@ export default function Ticket() {
                 {item.atributos.map(attr => `${attr.nombre}: ${attr.valor}`).join(' | ')}
               </Typography>
             )}
+            {Array.isArray(item.agregados) && item.agregados.length > 0 && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                Agregados: {item.agregados.map((agg) => agg.nombre).join(', ')}
+              </Typography>
+            )}
             {item.observacion && (
               <Typography variant="caption">Obs: {item.observacion}</Typography>
             )}
