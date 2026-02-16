@@ -209,3 +209,11 @@ export const obtenerLocales = () => API.get('/locales');
 export const crearLocal = (data) => API.post('/locales', data);
 export const editarLocal = (id, data) => API.put(`/locales/${id}`, data);
 export const eliminarLocal = (id) => API.delete(`/locales/${id}`);
+
+// ─────────────────────────────────────────────
+// 🌐 Pedidos Web (cliente)
+// ─────────────────────────────────────────────
+export const obtenerPedidosWeb = (params) => API.get('/ventasCliente/local/pedidos', { params });
+export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente/local/pedidos/${id}/estado`, data);
+
+

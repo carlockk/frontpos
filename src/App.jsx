@@ -9,6 +9,7 @@ import { useAuth } from './context/AuthContext';
 import { CajaProvider } from './context/CajaContext';
 
 import Sidebar from './components/Sidebar';
+import PedidosWebWatcher from './components/PedidosWebWatcher';
 import Productos from './pages/Productos';
 import CrearProducto from './pages/CrearProducto';
 import Categorias from './pages/CrearCategoria';
@@ -22,11 +23,12 @@ import CrearUsuario from './pages/CrearUsuario';
 import ListaUsuarios from './pages/ListaUsuarios';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import TicketsAbiertos from './pages/TicketsAbiertos'; // ✅ NUEVO
+import TicketsAbiertos from './pages/TicketsAbiertos';
 import Locales from './pages/Locales';
 import Insumos from './pages/Insumos';
 import ConfigRecibo from './pages/ConfigRecibo';
 import Agregados from './pages/Agregados';
+import PedidosWeb from './pages/PedidosWeb';
 
 const drawerWidth = 320;
 
@@ -61,6 +63,8 @@ export default function App() {
         {!isLoginRoute && (
           <Sidebar mobileOpen={mobileOpen} toggleDrawer={toggleDrawer} />
         )}
+
+        {!isLoginRoute && <PedidosWebWatcher />}
 
         <Box
           component="main"
@@ -110,7 +114,8 @@ export default function App() {
             />
             <Route path="/ticket" element={<Ticket />} />
             <Route path="/ticket-caja" element={<TicketCaja />} />
-            <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} /> {/* ✅ NUEVO */}
+            <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} />
+            <Route path="/pedidos-web" element={usuario ? <PedidosWeb /> : <Navigate to="/login" />} />
             <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
             <Route path="/insumos" element={usuario ? <Insumos /> : <Navigate to="/login" />} />
             <Route path="/agregados" element={usuario ? <Agregados /> : <Navigate to="/login" />} />

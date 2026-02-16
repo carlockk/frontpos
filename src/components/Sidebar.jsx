@@ -37,6 +37,7 @@ import StoreIcon from '@mui/icons-material/StoreOutlined';
 import StorefrontIcon from '@mui/icons-material/StorefrontOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import LanguageIcon from '@mui/icons-material/Language';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
@@ -290,6 +291,15 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   </ListItemButton>
 </ListItem>
 
+        {/* pedidos web */}
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin' || usuario?.rol === 'cajero') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/pedidos-web" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><LanguageIcon /></Box>
+              <ListItemText primary="Pedidos Web" />
+            </ListItemButton>
+          </ListItem>
+        )}
 
         {/* Solo admin */}
         {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin' || usuario?.rol === 'cajero') && (
@@ -388,3 +398,5 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     </Drawer>
   );
 }
+
+
