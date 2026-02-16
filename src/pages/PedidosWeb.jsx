@@ -16,14 +16,20 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography
 } from '@mui/material';
 import { useLocation } from 'react-router-dom';
-import { actualizarEstadoPedidoWeb, obtenerPedidosWeb } from '../services/api';
+import {
+  actualizarEstadoPedidoWeb,
+  crearEstadoPedidoWeb,
+  obtenerEstadosPedidoWeb,
+  obtenerPedidosWeb
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const CERRADOS = new Set(['entregado', 'rechazado', 'cancelado']);
-const ESTADOS = ['pendiente', 'aceptado', 'preparando', 'listo', 'entregado', 'rechazado', 'cancelado'];
+const ESTADOS_DEFAULT = ['pendiente', 'aceptado', 'preparando', 'listo', 'entregado', 'rechazado', 'cancelado'];
 
 const getEstado = (pedido) =>
   String(pedido?.estado_pedido || pedido?.estado || pedido?.status || 'pendiente').toLowerCase();
@@ -49,14 +55,20 @@ const getPedidoDate = (pedido) =>
 export default function PedidosWeb() {
   const { usuario, selectedLocal } = useAuth();
   const location = useLocation();
+
   const [tab, setTab] = useState('abiertos');
   const [pedidos, setPedidos] = useState([]);
+  const [estados, setEstados] = useState(ESTADOS_DEFAULT);
+  const [nuevoEstado, setNuevoEstado] = useState('');
   const [loading, setLoading] = useState(false);
   const [pedidoActivo, setPedidoActivo] = useState(null);
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
+  const [creandoEstado, setCreandoEstado] = useState(false);
 
   const localId = useMemo(() => getLocalId(selectedLocal, usuario), [selectedLocal, usuario]);
+  const puedeGestionar = ['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '');
+  const puedeCrearEstados = ['admin', 'superadmin'].includes(usuario?.rol || '');
 
   const cargarPedidos = async () => {
     if (!localId) {
@@ -77,8 +89,23 @@ export default function PedidosWeb() {
     }
   };
 
+  const cargarEstados = async () => {
+    if (!localId) {
+      setEstados(ESTADOS_DEFAULT);
+      return;
+    }
+    try {
+      const res = await obtenerEstadosPedidoWeb();
+      const data = Array.isArray(res?.data?.estados) ? res.data.estados : ESTADOS_DEFAULT;
+      setEstados(data.length > 0 ? data : ESTADOS_DEFAULT);
+    } catch {
+      setEstados(ESTADOS_DEFAULT);
+    }
+  };
+
   useEffect(() => {
     cargarPedidos();
+    cargarEstados();
   }, [localId]);
 
   useEffect(() => {
@@ -106,16 +133,42 @@ export default function PedidosWeb() {
     return pedidos.filter((p) => CERRADOS.has(getEstado(p)));
   }, [pedidos, tab]);
 
+  const estadosSelect = useMemo(() => {
+    const fromApi = Array.isArray(estados) ? estados : [];
+    const fromPedido = pedidoActivo ? [getEstado(pedidoActivo)] : [];
+    return Array.from(new Set([...ESTADOS_DEFAULT, ...fromApi, ...fromPedido]));
+  }, [estados, pedidoActivo]);
+
   const guardarEstado = async () => {
-    if (!pedidoActivo?._id) return;
+    if (!pedidoActivo?._id || !puedeGestionar) return;
     setGuardandoEstado(true);
     try {
       const res = await actualizarEstadoPedidoWeb(pedidoActivo._id, { estado: estadoEdicion });
       const actualizado = res.data;
       setPedidos((prev) => prev.map((p) => (p._id === actualizado._id ? actualizado : p)));
       setPedidoActivo(actualizado);
+      await cargarEstados();
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo actualizar el estado');
     } finally {
       setGuardandoEstado(false);
+    }
+  };
+
+  const crearEstado = async () => {
+    const estadoLimpio = String(nuevoEstado || '').trim().toLowerCase();
+    if (!estadoLimpio || !puedeCrearEstados || !localId) return;
+
+    setCreandoEstado(true);
+    try {
+      const res = await crearEstadoPedidoWeb({ estado: estadoLimpio });
+      const lista = Array.isArray(res?.data?.estados) ? res.data.estados : [];
+      setEstados(lista.length > 0 ? lista : estados);
+      setNuevoEstado('');
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo crear el estado');
+    } finally {
+      setCreandoEstado(false);
     }
   };
 
@@ -125,6 +178,25 @@ export default function PedidosWeb() {
       {!localId && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography color="text.secondary">Selecciona un local para gestionar pedidos web.</Typography>
+        </Paper>
+      )}
+
+      {puedeCrearEstados && localId && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Estados personalizados</Typography>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+            <TextField
+              size="small"
+              fullWidth
+              label="Nuevo estado"
+              value={nuevoEstado}
+              onChange={(e) => setNuevoEstado(e.target.value)}
+              placeholder="ej: en_cocina"
+            />
+            <Button variant="contained" onClick={crearEstado} disabled={creandoEstado || !nuevoEstado.trim()}>
+              Crear estado
+            </Button>
+          </Stack>
         </Paper>
       )}
 
@@ -144,7 +216,7 @@ export default function PedidosWeb() {
               <TableCell>Cliente</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Estado</TableCell>
-              <TableCell align="right">Acción</TableCell>
+              <TableCell align="right">Accion</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -174,7 +246,7 @@ export default function PedidosWeb() {
             {pedidosFiltrados.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} align="center">
-                  {loading ? 'Cargando pedidos...' : 'Sin pedidos en esta pestaña'}
+                  {loading ? 'Cargando pedidos...' : 'Sin pedidos en esta pestana'}
                 </TableCell>
               </TableRow>
             )}
@@ -203,16 +275,16 @@ export default function PedidosWeb() {
                   fullWidth
                   value={estadoEdicion}
                   onChange={(e) => setEstadoEdicion(e.target.value)}
-                  disabled={!['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '')}
+                  disabled={!puedeGestionar}
                 >
-                  {ESTADOS.map((estado) => (
+                  {estadosSelect.map((estado) => (
                     <MenuItem key={estado} value={estado}>{estado}</MenuItem>
                   ))}
                 </Select>
                 <Button
                   variant="contained"
                   onClick={guardarEstado}
-                  disabled={guardandoEstado || !['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '')}
+                  disabled={guardandoEstado || !puedeGestionar}
                 >
                   Guardar
                 </Button>

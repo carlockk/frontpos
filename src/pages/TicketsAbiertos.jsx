@@ -21,7 +21,9 @@ export default function TicketsAbiertos() {
   const cargarTickets = async () => {
     try {
       const res = await obtenerTicketsAbiertos();
-      setTickets(res.data);
+      const data = Array.isArray(res.data) ? res.data : [];
+      const soloPOS = data.filter((ticket) => !String(ticket?.nombre || '').startsWith('WEB #'));
+      setTickets(soloPOS);
     } catch (err) {
       alert('❌ Error al cargar tickets');
     }
@@ -91,3 +93,4 @@ export default function TicketsAbiertos() {
     </Box>
   );
 }
+
