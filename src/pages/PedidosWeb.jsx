@@ -23,6 +23,7 @@ import { useLocation } from 'react-router-dom';
 import {
   actualizarEstadoPedidoWeb,
   crearEstadoPedidoWeb,
+  eliminarPedidoWeb,
   obtenerEstadosPedidoWeb,
   obtenerPedidosWeb
 } from '../services/api';
@@ -65,10 +66,12 @@ export default function PedidosWeb() {
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [creandoEstado, setCreandoEstado] = useState(false);
+  const [eliminandoPedido, setEliminandoPedido] = useState(false);
 
   const localId = useMemo(() => getLocalId(selectedLocal, usuario), [selectedLocal, usuario]);
   const puedeGestionar = ['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '');
   const puedeCrearEstados = ['admin', 'superadmin'].includes(usuario?.rol || '');
+  const puedeEliminarPedidos = ['admin', 'superadmin'].includes(usuario?.rol || '');
 
   const cargarPedidos = async () => {
     if (!localId) {
@@ -172,6 +175,25 @@ export default function PedidosWeb() {
     }
   };
 
+  const eliminarPedido = async (pedido) => {
+    if (!pedido?._id || !puedeEliminarPedidos) return;
+    const ok = window.confirm(`¿Eliminar pedido #${pedido.numero_pedido || pedido._id?.slice(-5)}?`);
+    if (!ok) return;
+
+    setEliminandoPedido(true);
+    try {
+      await eliminarPedidoWeb(pedido._id);
+      setPedidos((prev) => prev.filter((p) => p._id !== pedido._id));
+      if (pedidoActivo?._id === pedido._id) {
+        setPedidoActivo(null);
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo eliminar el pedido');
+    } finally {
+      setEliminandoPedido(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Pedidos Web</Typography>
@@ -230,16 +252,29 @@ export default function PedidosWeb() {
                   <Chip size="small" label={getEstado(pedido)} />
                 </TableCell>
                 <TableCell align="right">
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      setPedidoActivo(pedido);
-                      setEstadoEdicion(getEstado(pedido));
-                    }}
-                  >
-                    Ver
-                  </Button>
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setPedidoActivo(pedido);
+                        setEstadoEdicion(getEstado(pedido));
+                      }}
+                    >
+                      Ver
+                    </Button>
+                    {puedeEliminarPedidos && (
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        disabled={eliminandoPedido}
+                        onClick={() => eliminarPedido(pedido)}
+                      >
+                        Eliminar
+                      </Button>
+                    )}
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
@@ -315,11 +350,21 @@ export default function PedidosWeb() {
               </Stack>
             </Box>
 
-            <Box sx={{ pt: 1 }}>
+            <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
               <Button variant="contained" onClick={() => window.print()}>
                 Imprimir
               </Button>
-            </Box>
+              {puedeEliminarPedidos && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={eliminandoPedido}
+                  onClick={() => eliminarPedido(pedidoActivo)}
+                >
+                  Eliminar
+                </Button>
+              )}
+            </Stack>
           </Stack>
         )}
       </Drawer>

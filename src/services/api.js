@@ -221,3 +221,8 @@ export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente
 
 
 
+
+
+export const eliminarPedidoWeb = (id) => API.delete('/ventasCliente/local/pedidos/' + id);
+
+
