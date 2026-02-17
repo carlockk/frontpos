@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Card, CardContent, useTheme,
-  useMediaQuery, Divider, Button, Paper,
+  useMediaQuery, Divider, Button, Paper, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -53,7 +53,7 @@ export default function Dashboard() {
   }, [rangoFechas, selectedLocal?._id]);
 
   const pieChartData = resumen
-    ? Object.entries(resumen.porTipoPago).map(([tipo, valor]) => ({
+    ? Object.entries(resumen.porTipoPago || {}).map(([tipo, valor]) => ({
         name: tipo,
         value: valor
       }))
@@ -68,6 +68,12 @@ export default function Dashboard() {
 
   const productosResumen = resumen?.porProducto || [];
   const topProductos = [...productosResumen].sort((a, b) => b.total - a.total).slice(0, 10);
+  const totalPos = Number(resumen?.totalesPorCanal?.POS?.total || 0);
+  const totalWeb = Number(resumen?.totalesPorCanal?.WEB?.total || 0);
+  const cantidadPos = Number(resumen?.totalesPorCanal?.POS?.cantidad || 0);
+  const cantidadWeb = Number(resumen?.totalesPorCanal?.WEB?.cantidad || 0);
+  const desglosePagoPos = resumen?.porTipoPagoDetallado?.POS || {};
+  const desglosePagoWeb = resumen?.porTipoPagoDetallado?.WEB || {};
 
   const formatoMoneda = (valor) =>
     Number(valor || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -181,6 +187,36 @@ export default function Dashboard() {
               <Divider sx={{ my: 1, borderColor: dividerColor }} />
               <Typography variant="h3" color="text.primary">
                 {resumen.cantidad}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card elevation={4} sx={{ backgroundColor: bgCard1, flex: 1 }}>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                Ventas POS
+              </Typography>
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
+              <Typography variant="h5" color="text.primary">
+                ${totalPos.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {cantidadPos} ventas
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card elevation={4} sx={{ backgroundColor: bgCard2, flex: 1 }}>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                Pedidos Web Entregados
+              </Typography>
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
+              <Typography variant="h5" color="text.primary">
+                ${totalWeb.toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {cantidadWeb} pedidos
               </Typography>
             </CardContent>
           </Card>
@@ -318,6 +354,45 @@ export default function Dashboard() {
                   No hay datos.
                 </Typography>
               )}
+            </CardContent>
+          </Card>
+
+          <Card elevation={4} sx={{ backgroundColor: bgCard6, flex: 1 }}>
+            <CardContent>
+              <Typography variant="subtitle1" fontWeight="bold" color="text.primary">
+                Tipo de Pago por Canal
+              </Typography>
+              <Divider sx={{ my: 1, borderColor: dividerColor }} />
+              <Stack spacing={1.25}>
+                <Box>
+                  <Typography variant="body2" fontWeight={700} color="text.primary">
+                    POS
+                  </Typography>
+                  {Object.keys(desglosePagoPos).length > 0 ? (
+                    Object.entries(desglosePagoPos).map(([tipo, valor]) => (
+                      <Typography key={`pago-pos-${tipo}`} variant="body2" color="text.secondary">
+                        {tipo}: ${formatoMoneda(valor)}
+                      </Typography>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">Sin datos</Typography>
+                  )}
+                </Box>
+                <Box>
+                  <Typography variant="body2" fontWeight={700} color="text.primary">
+                    WEB
+                  </Typography>
+                  {Object.keys(desglosePagoWeb).length > 0 ? (
+                    Object.entries(desglosePagoWeb).map(([tipo, valor]) => (
+                      <Typography key={`pago-web-${tipo}`} variant="body2" color="text.secondary">
+                        {tipo}: ${formatoMoneda(valor)}
+                      </Typography>
+                    ))
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">Sin datos</Typography>
+                  )}
+                </Box>
+              </Stack>
             </CardContent>
           </Card>
         </Box>
