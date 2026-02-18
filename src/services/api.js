@@ -216,6 +216,10 @@ export const eliminarLocal = (id) => API.delete(`/locales/${id}`);
 export const obtenerPedidosWeb = (params) => API.get('/ventasCliente/local/pedidos', { params });
 export const obtenerEstadosPedidoWeb = () => API.get('/ventasCliente/local/estados');
 export const crearEstadoPedidoWeb = (data) => API.post('/ventasCliente/local/estados', data);
+export const editarEstadoPedidoWeb = (estadoActual, data) =>
+  API.put(`/ventasCliente/local/estados/${encodeURIComponent(estadoActual)}`, data);
+export const eliminarEstadoPedidoWeb = (estado) =>
+  API.delete(`/ventasCliente/local/estados/${encodeURIComponent(estado)}`);
 export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente/local/pedidos/${id}/estado`, data);
 
 

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Box,
   Button,
   Chip,
@@ -23,11 +26,14 @@ import { useLocation } from 'react-router-dom';
 import {
   actualizarEstadoPedidoWeb,
   crearEstadoPedidoWeb,
+  editarEstadoPedidoWeb,
+  eliminarEstadoPedidoWeb,
   eliminarPedidoWeb,
   obtenerEstadosPedidoWeb,
   obtenerPedidosWeb
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const CERRADOS = new Set(['entregado', 'rechazado', 'cancelado']);
 const ESTADOS_DEFAULT = ['pendiente', 'aceptado', 'preparando', 'listo', 'entregado', 'rechazado', 'cancelado'];
@@ -66,6 +72,11 @@ export default function PedidosWeb() {
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [creandoEstado, setCreandoEstado] = useState(false);
+  const [mostrandoEstados, setMostrandoEstados] = useState(false);
+  const [estadoEditando, setEstadoEditando] = useState('');
+  const [estadoNuevoValor, setEstadoNuevoValor] = useState('');
+  const [actualizandoEstado, setActualizandoEstado] = useState(false);
+  const [eliminandoEstado, setEliminandoEstado] = useState('');
   const [eliminandoPedido, setEliminandoPedido] = useState(false);
 
   const localId = useMemo(() => getLocalId(selectedLocal, usuario), [selectedLocal, usuario]);
@@ -194,6 +205,53 @@ export default function PedidosWeb() {
     }
   };
 
+  const iniciarEdicionEstado = (estado) => {
+    setEstadoEditando(estado);
+    setEstadoNuevoValor(estado);
+  };
+
+  const guardarEdicionEstado = async (estadoActual) => {
+    const nuevo = String(estadoNuevoValor || '').trim().toLowerCase();
+    if (!nuevo || !puedeCrearEstados || !localId) return;
+
+    setActualizandoEstado(true);
+    try {
+      const res = await editarEstadoPedidoWeb(estadoActual, { estado: nuevo });
+      const lista = Array.isArray(res?.data?.estados) ? res.data.estados : [];
+      setEstados(lista.length > 0 ? lista : estados);
+      setEstadoEditando('');
+      setEstadoNuevoValor('');
+      if (pedidoActivo) {
+        setEstadoEdicion((prev) => (prev === estadoActual ? nuevo : prev));
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo editar el estado');
+    } finally {
+      setActualizandoEstado(false);
+    }
+  };
+
+  const eliminarEstado = async (estado) => {
+    if (!estado || !puedeCrearEstados || !localId) return;
+    const ok = window.confirm(`¿Eliminar estado "${estado}"?`);
+    if (!ok) return;
+
+    setEliminandoEstado(estado);
+    try {
+      const res = await eliminarEstadoPedidoWeb(estado);
+      const lista = Array.isArray(res?.data?.estados) ? res.data.estados : [];
+      setEstados(lista.length > 0 ? lista : ESTADOS_DEFAULT);
+      if (estadoEditando === estado) {
+        setEstadoEditando('');
+        setEstadoNuevoValor('');
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo eliminar el estado');
+    } finally {
+      setEliminandoEstado('');
+    }
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="h5" sx={{ mb: 2 }}>Pedidos Web</Typography>
@@ -218,7 +276,79 @@ export default function PedidosWeb() {
             <Button variant="contained" onClick={crearEstado} disabled={creandoEstado || !nuevoEstado.trim()}>
               Crear estado
             </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setMostrandoEstados((prev) => !prev)}
+            >
+              {mostrandoEstados ? 'Ocultar estados' : 'Ver estados'}
+            </Button>
           </Stack>
+          <Accordion
+            disableGutters
+            elevation={0}
+            expanded={mostrandoEstados}
+            onChange={(_e, expanded) => setMostrandoEstados(expanded)}
+            sx={{ mt: 1.5, border: '1px solid', borderColor: 'divider' }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="body2">Listado de estados ({estados.length})</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Stack spacing={1}>
+                {estados.map((estado) => (
+                  <Stack
+                    key={estado}
+                    direction={{ xs: 'column', md: 'row' }}
+                    spacing={1}
+                    alignItems={{ xs: 'stretch', md: 'center' }}
+                  >
+                    {estadoEditando === estado ? (
+                      <>
+                        <TextField
+                          size="small"
+                          fullWidth
+                          value={estadoNuevoValor}
+                          onChange={(e) => setEstadoNuevoValor(e.target.value)}
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={() => guardarEdicionEstado(estado)}
+                          disabled={actualizandoEstado || !estadoNuevoValor.trim()}
+                        >
+                          Guardar
+                        </Button>
+                        <Button
+                          variant="text"
+                          onClick={() => {
+                            setEstadoEditando('');
+                            setEstadoNuevoValor('');
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Chip label={estado} size="small" />
+                        <Button size="small" variant="outlined" onClick={() => iniciarEdicionEstado(estado)}>
+                          Editar
+                        </Button>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          disabled={eliminandoEstado === estado}
+                          onClick={() => eliminarEstado(estado)}
+                        >
+                          Eliminar
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+                ))}
+              </Stack>
+            </AccordionDetails>
+          </Accordion>
         </Paper>
       )}
 
