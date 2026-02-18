@@ -264,21 +264,29 @@ export default function PedidosWeb() {
       {puedeCrearEstados && localId && (
         <Paper sx={{ p: 2, mb: 2 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Estados personalizados</Typography>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-            <TextField
-              size="small"
-              fullWidth
-              label="Nuevo estado"
-              value={nuevoEstado}
-              onChange={(e) => setNuevoEstado(e.target.value)}
-              placeholder="ej: en_cocina"
-            />
-            <Button variant="contained" onClick={crearEstado} disabled={creandoEstado || !nuevoEstado.trim()}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'stretch', md: 'center' }}>
+            <Box sx={{ width: { xs: '100%', md: 320 } }}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Nuevo estado"
+                value={nuevoEstado}
+                onChange={(e) => setNuevoEstado(e.target.value)}
+                placeholder="ej: en_cocina"
+              />
+            </Box>
+            <Button
+              variant="contained"
+              onClick={crearEstado}
+              disabled={creandoEstado || !nuevoEstado.trim()}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
+            >
               Crear estado
             </Button>
             <Button
               variant="outlined"
               onClick={() => setMostrandoEstados((prev) => !prev)}
+              sx={{ width: { xs: '100%', md: 'auto' } }}
             >
               {mostrandoEstados ? 'Ocultar estados' : 'Ver estados'}
             </Button>
@@ -294,59 +302,71 @@ export default function PedidosWeb() {
               <Typography variant="body2">Listado de estados ({estados.length})</Typography>
             </AccordionSummary>
             <AccordionDetails>
-              <Stack spacing={1}>
-                {estados.map((estado) => (
-                  <Stack
-                    key={estado}
-                    direction={{ xs: 'column', md: 'row' }}
-                    spacing={1}
-                    alignItems={{ xs: 'stretch', md: 'center' }}
-                  >
-                    {estadoEditando === estado ? (
-                      <>
-                        <TextField
-                          size="small"
-                          fullWidth
-                          value={estadoNuevoValor}
-                          onChange={(e) => setEstadoNuevoValor(e.target.value)}
-                        />
-                        <Button
-                          variant="contained"
-                          onClick={() => guardarEdicionEstado(estado)}
-                          disabled={actualizandoEstado || !estadoNuevoValor.trim()}
-                        >
-                          Guardar
-                        </Button>
-                        <Button
-                          variant="text"
-                          onClick={() => {
-                            setEstadoEditando('');
-                            setEstadoNuevoValor('');
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Chip label={estado} size="small" />
-                        <Button size="small" variant="outlined" onClick={() => iniciarEdicionEstado(estado)}>
-                          Editar
-                        </Button>
-                        <Button
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                          disabled={eliminandoEstado === estado}
-                          onClick={() => eliminarEstado(estado)}
-                        >
-                          Eliminar
-                        </Button>
-                      </>
-                    )}
-                  </Stack>
-                ))}
-              </Stack>
+              <TableContainer component={Paper} variant="outlined">
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Estado</TableCell>
+                      <TableCell align="right">Acciones</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {estados.map((estado) => (
+                      <TableRow key={estado}>
+                        <TableCell>
+                          {estadoEditando === estado ? (
+                            <TextField
+                              size="small"
+                              fullWidth
+                              value={estadoNuevoValor}
+                              onChange={(e) => setEstadoNuevoValor(e.target.value)}
+                            />
+                          ) : (
+                            <Chip label={estado} size="small" />
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {estadoEditando === estado ? (
+                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} justifyContent="flex-end">
+                              <Button
+                                variant="contained"
+                                onClick={() => guardarEdicionEstado(estado)}
+                                disabled={actualizandoEstado || !estadoNuevoValor.trim()}
+                              >
+                                Guardar
+                              </Button>
+                              <Button
+                                variant="text"
+                                onClick={() => {
+                                  setEstadoEditando('');
+                                  setEstadoNuevoValor('');
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                            </Stack>
+                          ) : (
+                            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} justifyContent="flex-end">
+                              <Button size="small" variant="outlined" onClick={() => iniciarEdicionEstado(estado)}>
+                                Editar
+                              </Button>
+                              <Button
+                                size="small"
+                                color="error"
+                                variant="outlined"
+                                disabled={eliminandoEstado === estado}
+                                onClick={() => eliminarEstado(estado)}
+                              >
+                                Eliminar
+                              </Button>
+                            </Stack>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </AccordionDetails>
           </Accordion>
         </Paper>
