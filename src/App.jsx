@@ -29,6 +29,7 @@ import Insumos from './pages/Insumos';
 import ConfigRecibo from './pages/ConfigRecibo';
 import Agregados from './pages/Agregados';
 import PedidosWeb from './pages/PedidosWeb';
+import SocialConfig from './pages/SocialConfig';
 
 const drawerWidth = 320;
 
@@ -104,10 +105,7 @@ export default function App() {
             <Route path="/pos" element={usuario ? <POS /> : <Navigate to="/login" />} />
             <Route path="/dashboard" element={usuario ? <Dashboard /> : <Navigate to="/login" />} />
             <Route path="/historial" element={usuario ? <Historial /> : <Navigate to="/login" />} />
-            <Route
-              path="/caja"
-              element={usuario ? <Caja /> : <Navigate to="/login" />}
-            />
+            <Route path="/caja" element={usuario ? <Caja /> : <Navigate to="/login" />} />
             <Route
               path="/historial-cajas"
               element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <HistorialCajas /> : <Navigate to="/" />}
@@ -119,6 +117,10 @@ export default function App() {
             <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
             <Route path="/insumos" element={usuario ? <Insumos /> : <Navigate to="/login" />} />
             <Route path="/agregados" element={usuario ? <Agregados /> : <Navigate to="/login" />} />
+            <Route
+              path="/social"
+              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <SocialConfig /> : <Navigate to="/" />}
+            />
             <Route
               path="/config-recibo"
               element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <ConfigRecibo /> : <Navigate to="/" />}

@@ -267,6 +267,16 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </ListItem>
         )}
 
+
+        {/* Configuracion social */}
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/social" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><LanguageIcon /></Box>
+              <ListItemText primary="Social" />
+            </ListItemButton>
+          </ListItem>
+        )}
         {/* POS */}
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/pos" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
@@ -398,5 +408,6 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     </Drawer>
   );
 }
+
 
 

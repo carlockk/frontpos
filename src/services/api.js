@@ -202,6 +202,12 @@ export const guardarConfigRecibo = (data) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
+
+// ─────────────────────────────────────────────
+// 🌐 Configuracion social
+// ─────────────────────────────────────────────
+export const obtenerConfigSocial = () => API.get('/social-config');
+export const guardarConfigSocial = (data) => API.put('/social-config', data);
 // ─────────────────────────────────────────────
 // 🏬 Locales
 // ─────────────────────────────────────────────
@@ -228,5 +234,6 @@ export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente
 
 
 export const eliminarPedidoWeb = (id) => API.delete('/ventasCliente/local/pedidos/' + id);
+
 
 
