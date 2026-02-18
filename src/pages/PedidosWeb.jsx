@@ -72,7 +72,6 @@ export default function PedidosWeb() {
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [creandoEstado, setCreandoEstado] = useState(false);
-  const [mostrandoEstados, setMostrandoEstados] = useState(false);
   const [estadoEditando, setEstadoEditando] = useState('');
   const [estadoNuevoValor, setEstadoNuevoValor] = useState('');
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
@@ -283,19 +282,10 @@ export default function PedidosWeb() {
             >
               Crear estado
             </Button>
-            <Button
-              variant="outlined"
-              onClick={() => setMostrandoEstados((prev) => !prev)}
-              sx={{ width: { xs: '100%', md: 'auto' } }}
-            >
-              {mostrandoEstados ? 'Ocultar estados' : 'Ver estados'}
-            </Button>
           </Stack>
           <Accordion
             disableGutters
             elevation={0}
-            expanded={mostrandoEstados}
-            onChange={(_e, expanded) => setMostrandoEstados(expanded)}
             sx={{ mt: 1.5, border: '1px solid', borderColor: 'divider' }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
