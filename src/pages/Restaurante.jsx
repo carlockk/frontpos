@@ -5,7 +5,6 @@ import {
   Button,
   Card,
   CardContent,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -35,7 +34,7 @@ import {
   eliminarMesaRestaurante,
   obtenerComandasRestaurante,
   obtenerMesasRestaurante,
-  obtenerProductos
+  obtenerProductosRestaurante
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -57,6 +56,43 @@ const labelEstadoComanda = {
   cerrada: 'Cerrada',
   cancelada: 'Cancelada'
 };
+
+const TINT_BY_STATE = {
+  libre: 'rgba(16,185,129,0.35)',
+  ocupada: 'rgba(239,68,68,0.35)',
+  reservada: 'rgba(245,158,11,0.35)',
+  inactiva: 'rgba(100,116,139,0.45)'
+};
+
+const MESA_COLORS = [
+  '#0ea5e9',
+  '#22c55e',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#14b8a6',
+  '#f97316',
+  '#06b6d4',
+  '#84cc16',
+  '#ec4899'
+];
+
+const hashTexto = (value) => {
+  const str = String(value || '');
+  let hash = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const colorMesa = (mesa) => {
+  const seed = mesa?._id || mesa?.numero || Math.random().toString();
+  return MESA_COLORS[hashTexto(seed) % MESA_COLORS.length];
+};
+
+const tintMesa = (estado) => TINT_BY_STATE[estado] || 'rgba(15,23,42,0.3)';
 
 export default function Restaurante() {
   const { usuario } = useAuth();
@@ -112,7 +148,7 @@ export default function Restaurante() {
       const [resMesas, resComandas, resProductos] = await Promise.all([
         obtenerMesasRestaurante(),
         obtenerComandasRestaurante(),
-        obtenerProductos()
+        obtenerProductosRestaurante()
       ]);
       setMesas(resMesas.data || []);
       setComandas(resComandas.data || []);
@@ -316,26 +352,77 @@ export default function Restaurante() {
       <Grid container spacing={2} sx={{ mb: 2 }}>
         {mesas.map((mesa) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={mesa._id}>
-            <Card>
-              <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Mesa {mesa.numero}
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2.5,
+                minHeight: 260,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                color: '#fff',
+                background: `
+                  linear-gradient(160deg, ${colorMesa(mesa)} 0%, rgba(15,23,42,0.9) 130%),
+                  linear-gradient(160deg, ${tintMesa(mesa.estado)} 0%, rgba(0,0,0,0.08) 100%)
+                `,
+                backgroundBlendMode: 'overlay, normal',
+                boxShadow: mesa.estado === 'ocupada'
+                  ? '0 12px 28px rgba(127,29,29,0.35)'
+                  : '0 10px 24px rgba(2,6,23,0.28)',
+                border: mesa.estado === 'inactiva'
+                  ? '1px dashed rgba(255,255,255,0.45)'
+                  : '1px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              <Box>
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    px: 1,
+                    py: 0.3,
+                    borderRadius: 1,
+                    bgcolor: 'rgba(255,255,255,0.2)',
+                    backdropFilter: 'blur(2px)'
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, letterSpacing: 0.5 }}>
+                    {labelEstadoMesa[mesa.estado] || mesa.estado}
                   </Typography>
-                  <Chip label={labelEstadoMesa[mesa.estado] || mesa.estado} size="small" />
-                </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {mesa.nombre || 'Sin nombre'} {mesa.zona ? `- ${mesa.zona}` : ''}
+                </Box>
+                <Typography sx={{ fontSize: 52, fontWeight: 900, lineHeight: 1, mt: 1 }}>
+                  {mesa.numero}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                  {mesa.nombre || 'Sin nombre'}
+                </Typography>
+                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                  {mesa.zona ? `Zona: ${mesa.zona}` : 'Zona: General'}
+                </Typography>
+                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
                   Capacidad: {mesa.capacidad || 4}
                 </Typography>
+              </Box>
+
+              <Box mt={1.5}>
                 <FormControl size="small" fullWidth>
-                  <InputLabel>Estado</InputLabel>
+                  <InputLabel sx={{ color: '#fff' }}>Estado</InputLabel>
                   <Select
                     label="Estado"
                     value={mesa.estado}
                     onChange={(e) => actualizarEstadoMesa(mesa._id, e.target.value)}
+                    sx={{
+                      color: '#fff',
+                      bgcolor: 'rgba(255,255,255,0.12)',
+                      '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.45)' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#fff' },
+                      '.MuiSvgIcon-root': { color: '#fff' }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { bgcolor: '#111827', color: '#fff' }
+                      }
+                    }}
                   >
                     {ESTADOS_MESA.map((estado) => (
                       <MenuItem key={estado} value={estado}>
@@ -346,16 +433,27 @@ export default function Restaurante() {
                 </FormControl>
                 {esAdmin && (
                   <Stack direction="row" spacing={1} mt={1}>
-                    <Button size="small" variant="outlined" onClick={() => abrirEditorMesa(mesa)}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => abrirEditorMesa(mesa)}
+                      sx={{ bgcolor: 'rgba(255,255,255,0.25)', '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' } }}
+                    >
                       Editar
                     </Button>
-                    <Button size="small" color="error" variant="outlined" onClick={() => eliminarMesa(mesa._id)}>
+                    <Button
+                      size="small"
+                      color="error"
+                      variant="contained"
+                      onClick={() => eliminarMesa(mesa._id)}
+                      sx={{ bgcolor: 'rgba(127,29,29,0.75)', '&:hover': { bgcolor: 'rgba(127,29,29,0.95)' } }}
+                    >
                       Eliminar
                     </Button>
                   </Stack>
                 )}
-              </CardContent>
-            </Card>
+              </Box>
+            </Box>
           </Grid>
         ))}
       </Grid>

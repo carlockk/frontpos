@@ -239,6 +239,7 @@ export const eliminarPedidoWeb = (id) => API.delete('/ventasCliente/local/pedido
 // 🍽️ Restaurante
 // ─────────────────────────────────────────────
 export const obtenerMesasRestaurante = () => API.get('/restaurante/mesas');
+export const obtenerProductosRestaurante = () => API.get('/restaurante/productos');
 export const crearMesaRestaurante = (data) => API.post('/restaurante/mesas', data);
 export const actualizarEstadoMesaRestaurante = (id, data) =>
   API.patch(`/restaurante/mesas/${id}/estado`, data);
