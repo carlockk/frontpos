@@ -26,20 +26,26 @@ import {
 import {
   actualizarEstadoComandaRestaurante,
   actualizarEstadoMesaRestaurante,
+  cobrarComandaEnMesa,
   crearComandaRestaurante,
   crearMesaRestaurante,
   editarComandaRestaurante,
   editarMesaRestaurante,
   eliminarComandaRestaurante,
   eliminarMesaRestaurante,
+  enviarComandaACaja,
+  liberarMesaRestaurante,
   obtenerComandasRestaurante,
+  obtenerMeserosRestaurante,
   obtenerMesasRestaurante,
-  obtenerProductosRestaurante
+  obtenerProductosRestaurante,
+  tomarMesaRestaurante
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ModalPago from '../components/ModalPago';
 
 const ESTADOS_MESA = ['libre', 'ocupada', 'reservada', 'inactiva'];
-const ESTADOS_COMANDA = ['abierta', 'en_preparacion', 'lista', 'entregada', 'cerrada', 'cancelada'];
+const ESTADOS_COMANDA = ['abierta', 'en_preparacion', 'lista', 'entregada', 'lista_para_cobro', 'cerrada', 'cancelada'];
 
 const labelEstadoMesa = {
   libre: 'Libre',
@@ -53,6 +59,7 @@ const labelEstadoComanda = {
   en_preparacion: 'En preparación',
   lista: 'Lista',
   entregada: 'Entregada',
+  lista_para_cobro: 'Lista para cobro',
   cerrada: 'Cerrada',
   cancelada: 'Cancelada'
 };
@@ -99,6 +106,7 @@ export default function Restaurante() {
   const [mesas, setMesas] = useState([]);
   const [comandas, setComandas] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [meseros, setMeseros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -106,6 +114,8 @@ export default function Restaurante() {
   const [openEditarMesaDialog, setOpenEditarMesaDialog] = useState(false);
   const [openComandaDialog, setOpenComandaDialog] = useState(false);
   const [openEditarComandaDialog, setOpenEditarComandaDialog] = useState(false);
+  const [openCobroMesaDialog, setOpenCobroMesaDialog] = useState(false);
+  const [comandaCobroMesa, setComandaCobroMesa] = useState(null);
 
   const [mesaForm, setMesaForm] = useState({
     numero: '',
@@ -125,7 +135,8 @@ export default function Restaurante() {
     nombre: '',
     zona: '',
     capacidad: 4,
-    estado: 'libre'
+    estado: 'libre',
+    meseroAsignado: ''
   });
   const [editComandaForm, setEditComandaForm] = useState({
     id: '',
@@ -135,6 +146,11 @@ export default function Restaurante() {
   });
 
   const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
+  const esCajero = usuario?.rol === 'cajero';
+  const esAdminOCajero = esAdmin || esCajero;
+  const esMesero = usuario?.rol === 'mesero';
+  const puedeEnviarCaja = esAdmin || usuario?.rol === 'mesero';
+  const puedeCobrarEnMesa = esAdmin || usuario?.rol === 'mesero';
 
   const mesasDisponibles = useMemo(
     () => mesas.filter((mesa) => mesa.estado !== 'inactiva'),
@@ -153,6 +169,12 @@ export default function Restaurante() {
       setMesas(resMesas.data || []);
       setComandas(resComandas.data || []);
       setProductos(resProductos.data || []);
+      if (esAdminOCajero) {
+        const resMeseros = await obtenerMeserosRestaurante();
+        setMeseros(resMeseros.data || []);
+      } else {
+        setMeseros([]);
+      }
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo cargar el modulo restaurante');
     } finally {
@@ -187,7 +209,11 @@ export default function Restaurante() {
       nombre: mesa.nombre || '',
       zona: mesa.zona || '',
       capacidad: mesa.capacidad || 4,
-      estado: mesa.estado || 'libre'
+      estado: mesa.estado || 'libre',
+      meseroAsignado:
+        typeof mesa?.meseroAsignado === 'string'
+          ? mesa.meseroAsignado
+          : mesa?.meseroAsignado?._id || ''
     });
     setOpenEditarMesaDialog(true);
   };
@@ -199,7 +225,8 @@ export default function Restaurante() {
         nombre: editMesaForm.nombre,
         zona: editMesaForm.zona,
         capacidad: Number(editMesaForm.capacidad),
-        estado: editMesaForm.estado
+        estado: editMesaForm.estado,
+        meseroAsignado: esAdminOCajero ? (editMesaForm.meseroAsignado || null) : undefined
       });
       setOpenEditarMesaDialog(false);
       await cargarDatos();
@@ -216,6 +243,24 @@ export default function Restaurante() {
       await cargarDatos();
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo eliminar la mesa');
+    }
+  };
+
+  const tomarMesa = async (mesaId) => {
+    try {
+      await tomarMesaRestaurante(mesaId);
+      await cargarDatos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo tomar la mesa');
+    }
+  };
+
+  const liberarMesa = async (mesaId) => {
+    try {
+      await liberarMesaRestaurante(mesaId);
+      await cargarDatos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo liberar la mesa');
     }
   };
 
@@ -320,6 +365,37 @@ export default function Restaurante() {
     }
   };
 
+  const enviarCaja = async (comandaId) => {
+    try {
+      await enviarComandaACaja(comandaId);
+      await cargarDatos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo enviar la comanda a caja');
+    }
+  };
+
+  const abrirCobroMesa = (comanda) => {
+    setComandaCobroMesa(comanda);
+    setOpenCobroMesaDialog(true);
+  };
+
+  const cobrarEnMesa = async ({ tipoPago, tipoPedido }) => {
+    if (!comandaCobroMesa?._id) return;
+    try {
+      await cobrarComandaEnMesa(comandaCobroMesa._id, {
+        tipo_pago: tipoPago,
+        tipo_pedido: tipoPedido || `restaurante mesa ${comandaCobroMesa?.mesa?.numero || ''}`,
+        cobrador_nombre: usuario?.nombre || usuario?.email || ''
+      });
+      setOpenCobroMesaDialog(false);
+      setComandaCobroMesa(null);
+      await cargarDatos();
+      alert('Cobro en mesa registrado correctamente');
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo cobrar en mesa');
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 2 }}>
@@ -401,6 +477,9 @@ export default function Restaurante() {
                 <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
                   Capacidad: {mesa.capacidad || 4}
                 </Typography>
+                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                  Mesero: {mesa?.meseroAsignado?.nombre || mesa?.meseroAsignado?.email || 'Sin asignar'}
+                </Typography>
               </Box>
 
               <Box mt={1.5}>
@@ -431,7 +510,19 @@ export default function Restaurante() {
                     ))}
                   </Select>
                 </FormControl>
-                {esAdmin && (
+                {esMesero && mesa.estado === 'libre' && !mesa?.meseroAsignado && (
+                  <Stack direction="row" spacing={1} mt={1}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      onClick={() => tomarMesa(mesa._id)}
+                    >
+                      Tomar Mesa
+                    </Button>
+                  </Stack>
+                )}
+                {esAdminOCajero && (
                   <Stack direction="row" spacing={1} mt={1}>
                     <Button
                       size="small"
@@ -440,6 +531,14 @@ export default function Restaurante() {
                       sx={{ bgcolor: 'rgba(255,255,255,0.25)', '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' } }}
                     >
                       Editar
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => liberarMesa(mesa._id)}
+                      sx={{ bgcolor: 'rgba(30,41,59,0.65)', '&:hover': { bgcolor: 'rgba(30,41,59,0.9)' } }}
+                    >
+                      Liberar
                     </Button>
                     <Button
                       size="small"
@@ -469,7 +568,7 @@ export default function Restaurante() {
                 <TableCell>Items</TableCell>
                 <TableCell>Total</TableCell>
                 <TableCell>Estado</TableCell>
-                {esAdmin && <TableCell>Acciones</TableCell>}
+                {(esAdmin || puedeEnviarCaja) && <TableCell>Acciones</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -495,15 +594,29 @@ export default function Restaurante() {
                       </Select>
                     </FormControl>
                   </TableCell>
-                  {esAdmin && (
+                  {(esAdmin || puedeEnviarCaja) && (
                     <TableCell width={220}>
                       <Stack direction="row" spacing={1}>
-                        <Button size="small" variant="outlined" onClick={() => abrirEditorComanda(comanda)}>
-                          Editar
-                        </Button>
-                        <Button size="small" color="error" variant="outlined" onClick={() => eliminarComanda(comanda._id)}>
-                          Eliminar
-                        </Button>
+                        {comanda.estado !== 'lista_para_cobro' && comanda.estado !== 'cerrada' && comanda.estado !== 'cancelada' && (
+                          <Button size="small" variant="contained" onClick={() => enviarCaja(comanda._id)}>
+                            Enviar a Caja
+                          </Button>
+                        )}
+                        {puedeCobrarEnMesa && comanda.estado !== 'cerrada' && comanda.estado !== 'cancelada' && (
+                          <Button size="small" color="success" variant="contained" onClick={() => abrirCobroMesa(comanda)}>
+                            Cobrar en Mesa
+                          </Button>
+                        )}
+                        {esAdmin && (
+                          <>
+                            <Button size="small" variant="outlined" onClick={() => abrirEditorComanda(comanda)}>
+                              Editar
+                            </Button>
+                            <Button size="small" color="error" variant="outlined" onClick={() => eliminarComanda(comanda._id)}>
+                              Eliminar
+                            </Button>
+                          </>
+                        )}
                       </Stack>
                     </TableCell>
                   )}
@@ -676,6 +789,23 @@ export default function Restaurante() {
                 ))}
               </Select>
             </FormControl>
+            {esAdminOCajero && (
+              <FormControl fullWidth size="small">
+                <InputLabel>Mesero asignado</InputLabel>
+                <Select
+                  label="Mesero asignado"
+                  value={editMesaForm.meseroAsignado}
+                  onChange={(e) => setEditMesaForm((prev) => ({ ...prev, meseroAsignado: e.target.value }))}
+                >
+                  <MenuItem value="">Sin asignar</MenuItem>
+                  {meseros.map((mesero) => (
+                    <MenuItem key={mesero._id} value={mesero._id}>
+                      {mesero.nombre || mesero.email}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -729,6 +859,15 @@ export default function Restaurante() {
           <Button variant="contained" onClick={guardarEdicionComanda}>Guardar</Button>
         </DialogActions>
       </Dialog>
+
+      <ModalPago
+        open={openCobroMesaDialog}
+        onClose={() => {
+          setOpenCobroMesaDialog(false);
+          setComandaCobroMesa(null);
+        }}
+        onSubmit={cobrarEnMesa}
+      />
     </Box>
   );
 }

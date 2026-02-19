@@ -91,6 +91,9 @@ export default function Historial() {
                       <Typography variant="caption">
                         {new Date(venta.fecha).toLocaleTimeString()}
                       </Typography>
+                      <Typography variant="caption" display="block">
+                        {venta?.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email || 'Sin cobrador'} - {venta?.tipo_pago || 'Sin pago'}
+                      </Typography>
                     </Box>
                   </ListItemButton>
                 ))}

@@ -162,6 +162,14 @@ export default function VistaTicket({ venta }) {
 
         <Typography>Pago: {venta.tipo_pago || '—'}</Typography>
         <Typography>Pedido: {venta.tipo_pedido || '—'}</Typography>
+        {(venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email) && (
+          <Typography>
+            Cobrado por: {venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email}
+          </Typography>
+        )}
+        {venta.origen_cobro && (
+          <Typography>Origen cobro: {venta.origen_cobro}</Typography>
+        )}
 
         {config?.pie && (
           <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>

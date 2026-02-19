@@ -10,6 +10,7 @@ import { CajaProvider } from './context/CajaContext';
 
 import Sidebar from './components/Sidebar';
 import PedidosWebWatcher from './components/PedidosWebWatcher';
+import RestauranteCobroWatcher from './components/RestauranteCobroWatcher';
 import Productos from './pages/Productos';
 import CrearProducto from './pages/CrearProducto';
 import Categorias from './pages/CrearCategoria';
@@ -71,6 +72,7 @@ export default function App() {
         )}
 
         {!isLoginRoute && !esMesero && <PedidosWebWatcher />}
+        {!isLoginRoute && !esMesero && <RestauranteCobroWatcher />}
 
         <Box
           component="main"

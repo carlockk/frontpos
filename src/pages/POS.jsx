@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -20,7 +20,7 @@ import {
   Droppable,
   Draggable
 } from '@hello-pangea/dnd';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import CarritoDrawer from '../components/CarritoDrawer';
 import { obtenerProductos, obtenerCategorias, FILES_BASE } from '../services/api';
@@ -100,9 +100,11 @@ export default function POS() {
   const stockOkColor =
     theme.palette.mode === 'dark' ? '#a7f3d0' : '#15803d';
 
-  const { agregarProducto } = useCarrito();
+  const { agregarProducto, cargarCarrito } = useCarrito();
   const { cajaAbierta, cajaVerificada } = useCaja();
   const navigate = useNavigate();
+  const location = useLocation();
+  const procesadasRef = useRef(new Set());
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = user?.id || user?._id || 'anonimo';
@@ -198,6 +200,30 @@ export default function POS() {
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
   }, [selectedLocal?._id]);
+
+  useEffect(() => {
+    const comanda = location.state?.comandaPendiente;
+    if (!comanda?._id || procesadasRef.current.has(comanda._id)) {
+      return;
+    }
+
+    const items = (comanda.items || []).map((item) => ({
+      productoId: item.productoId,
+      nombre: item.nombre,
+      precio: Number(item.precio_unitario) || 0,
+      cantidad: Number(item.cantidad) || 1,
+      observacion: item.nota || '',
+      atributos: [],
+      agregados: []
+    }));
+
+    if (items.length > 0) {
+      cargarCarrito(items, true);
+      setOpenCarrito(true);
+      procesadasRef.current.add(comanda._id);
+      navigate('/pos', { replace: true, state: {} });
+    }
+  }, [location.state, cargarCarrito, navigate]);
 
   const handleAgregar = (producto) => {
     if (tieneVariantes(producto)) {

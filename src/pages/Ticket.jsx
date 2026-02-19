@@ -180,6 +180,14 @@ export default function Ticket() {
           <Typography variant="h6">Total: ${venta.total.toLocaleString()}</Typography>
           <Typography variant="body2">Pago: {venta.tipo_pago}</Typography>
           <Typography variant="body2">Pedido: {venta.tipo_pedido}</Typography>
+          {(venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email) && (
+            <Typography variant="body2">
+              Cobrado por: {venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email}
+            </Typography>
+          )}
+          {venta.origen_cobro && (
+            <Typography variant="body2">Origen cobro: {venta.origen_cobro}</Typography>
+          )}
 
           <hr />
           {config?.pie && (
