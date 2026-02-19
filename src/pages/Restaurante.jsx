@@ -515,21 +515,25 @@ export default function Restaurante() {
                     {labelEstadoMesa[mesa.estado] || mesa.estado}
                   </Typography>
                 </Box>
-                <Typography sx={{ fontSize: 42, fontWeight: 900, lineHeight: 1, mt: 0.75 }}>
-                  {mesa.numero}
-                </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.95, display: 'block' }}>
-                  {mesa.nombre || 'Sin nombre'}
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                  {mesa.zona ? `Zona: ${mesa.zona}` : 'Zona: General'}
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                  Capacidad: {mesa.capacidad || 4}
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                  Mesero: {mesa?.meseroAsignado?.nombre || mesa?.meseroAsignado?.email || 'Sin asignar'}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 0.75 }}>
+                  <Typography sx={{ fontSize: 52, fontWeight: 900, lineHeight: 1 }}>
+                    {mesa.numero}
+                  </Typography>
+                  <Box sx={{ ml: 1.25, textAlign: 'left' }}>
+                    <Typography variant="caption" sx={{ opacity: 0.95, display: 'block' }}>
+                      Mesa {mesa.numero}
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                      Zona: {mesa.zona || 'Central'}
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                      Capacidad: {mesa.capacidad || 4}
+                    </Typography>
+                    <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                      Mesero: {mesa?.meseroAsignado?.nombre || mesa?.meseroAsignado?.email || 'Sin asignar'}
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
 
               <Box mt={1.5}>
