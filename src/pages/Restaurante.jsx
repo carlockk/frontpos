@@ -39,7 +39,8 @@ import {
   obtenerMeserosRestaurante,
   obtenerMesasRestaurante,
   obtenerProductosRestaurante,
-  tomarMesaRestaurante
+  tomarMesaRestaurante,
+  transferirMesaRestaurante
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ModalPago from '../components/ModalPago';
@@ -115,7 +116,10 @@ export default function Restaurante() {
   const [openComandaDialog, setOpenComandaDialog] = useState(false);
   const [openEditarComandaDialog, setOpenEditarComandaDialog] = useState(false);
   const [openCobroMesaDialog, setOpenCobroMesaDialog] = useState(false);
+  const [openTransferirMesaDialog, setOpenTransferirMesaDialog] = useState(false);
   const [comandaCobroMesa, setComandaCobroMesa] = useState(null);
+  const [transferirMesaForm, setTransferirMesaForm] = useState({ mesaId: '', meseroId: '' });
+  const [mesaAccion, setMesaAccion] = useState({});
 
   const [mesaForm, setMesaForm] = useState({
     numero: '',
@@ -262,6 +266,52 @@ export default function Restaurante() {
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo liberar la mesa');
     }
+  };
+
+  const abrirTransferirMesa = (mesa) => {
+    const meseroIdActual =
+      typeof mesa?.meseroAsignado === 'string'
+        ? mesa.meseroAsignado
+        : mesa?.meseroAsignado?._id || '';
+
+    setTransferirMesaForm({
+      mesaId: mesa._id,
+      meseroId: meseroIdActual
+    });
+    setOpenTransferirMesaDialog(true);
+  };
+
+  const confirmarTransferenciaMesa = async () => {
+    if (!transferirMesaForm?.mesaId) return;
+    if (!transferirMesaForm?.meseroId) {
+      setError('Selecciona un mesero para transferir la mesa');
+      return;
+    }
+    try {
+      await transferirMesaRestaurante(transferirMesaForm.mesaId, { meseroId: transferirMesaForm.meseroId });
+      setOpenTransferirMesaDialog(false);
+      setTransferirMesaForm({ mesaId: '', meseroId: '' });
+      await cargarDatos();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo transferir la mesa');
+    }
+  };
+
+  const ejecutarAccionMesa = (mesa, accion) => {
+    if (!accion) return;
+    if (accion === 'tomar') {
+      tomarMesa(mesa._id);
+    } else if (accion === 'transferir') {
+      abrirTransferirMesa(mesa);
+    } else if (accion === 'editar') {
+      abrirEditorMesa(mesa);
+    } else if (accion === 'liberar') {
+      liberarMesa(mesa._id);
+    } else if (accion === 'eliminar') {
+      eliminarMesa(mesa._id);
+    }
+
+    setMesaAccion((prev) => ({ ...prev, [mesa._id]: '' }));
   };
 
   const actualizarEstadoMesa = async (mesaId, estado) => {
@@ -432,7 +482,7 @@ export default function Restaurante() {
               sx={{
                 p: 2,
                 borderRadius: 2.5,
-                minHeight: 260,
+                minHeight: 210,
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -465,10 +515,10 @@ export default function Restaurante() {
                     {labelEstadoMesa[mesa.estado] || mesa.estado}
                   </Typography>
                 </Box>
-                <Typography sx={{ fontSize: 52, fontWeight: 900, lineHeight: 1, mt: 1 }}>
+                <Typography sx={{ fontSize: 42, fontWeight: 900, lineHeight: 1, mt: 0.75 }}>
                   {mesa.numero}
                 </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.95 }}>
+                <Typography variant="caption" sx={{ opacity: 0.95, display: 'block' }}>
                   {mesa.nombre || 'Sin nombre'}
                 </Typography>
                 <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
@@ -483,6 +533,7 @@ export default function Restaurante() {
               </Box>
 
               <Box mt={1.5}>
+                <Stack spacing={1}>
                 <FormControl size="small" fullWidth>
                   <InputLabel sx={{ color: '#fff' }}>Estado</InputLabel>
                   <Select
@@ -499,7 +550,7 @@ export default function Restaurante() {
                     }}
                     MenuProps={{
                       PaperProps: {
-                        sx: { bgcolor: '#111827', color: '#fff' }
+                        sx: { bgcolor: '#111827', color: '#fff', maxHeight: 320 }
                       }
                     }}
                   >
@@ -510,47 +561,40 @@ export default function Restaurante() {
                     ))}
                   </Select>
                 </FormControl>
-                {esMesero && mesa.estado === 'libre' && !mesa?.meseroAsignado && (
-                  <Stack direction="row" spacing={1} mt={1}>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="success"
-                      onClick={() => tomarMesa(mesa._id)}
-                    >
-                      Tomar Mesa
-                    </Button>
-                  </Stack>
-                )}
-                {esAdminOCajero && (
-                  <Stack direction="row" spacing={1} mt={1}>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => abrirEditorMesa(mesa)}
-                      sx={{ bgcolor: 'rgba(255,255,255,0.25)', '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' } }}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => liberarMesa(mesa._id)}
-                      sx={{ bgcolor: 'rgba(30,41,59,0.65)', '&:hover': { bgcolor: 'rgba(30,41,59,0.9)' } }}
-                    >
-                      Liberar
-                    </Button>
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="contained"
-                      onClick={() => eliminarMesa(mesa._id)}
-                      sx={{ bgcolor: 'rgba(127,29,29,0.75)', '&:hover': { bgcolor: 'rgba(127,29,29,0.95)' } }}
-                    >
-                      Eliminar
-                    </Button>
-                  </Stack>
-                )}
+                <FormControl size="small" fullWidth>
+                  <InputLabel sx={{ color: '#fff' }}>Acción</InputLabel>
+                  <Select
+                    label="Acción"
+                    value={mesaAccion[mesa._id] || ''}
+                    onChange={(e) => {
+                      const accion = e.target.value;
+                      setMesaAccion((prev) => ({ ...prev, [mesa._id]: accion }));
+                      ejecutarAccionMesa(mesa, accion);
+                    }}
+                    sx={{
+                      color: '#fff',
+                      bgcolor: 'rgba(255,255,255,0.12)',
+                      '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.45)' },
+                      '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#fff' },
+                      '.MuiSvgIcon-root': { color: '#fff' }
+                    }}
+                    MenuProps={{
+                      PaperProps: {
+                        sx: { bgcolor: '#111827', color: '#fff', maxHeight: 320 }
+                      }
+                    }}
+                  >
+                    {esMesero && mesa.estado === 'libre' && !mesa?.meseroAsignado && (
+                      <MenuItem value="tomar">Tomar mesa</MenuItem>
+                    )}
+                    {esAdminOCajero && <MenuItem value="transferir">Transferir</MenuItem>}
+                    {esAdminOCajero && <MenuItem value="editar">Editar</MenuItem>}
+                    {esAdminOCajero && <MenuItem value="liberar">Liberar</MenuItem>}
+                    {esAdminOCajero && <MenuItem value="eliminar">Eliminar</MenuItem>}
+                  </Select>
+                </FormControl>
+                </Stack>
               </Box>
             </Box>
           </Grid>
@@ -868,6 +912,35 @@ export default function Restaurante() {
         }}
         onSubmit={cobrarEnMesa}
       />
+
+      <Dialog
+        open={openTransferirMesaDialog}
+        onClose={() => setOpenTransferirMesaDialog(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Transferir Mesa</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+            <InputLabel>Mesero destino</InputLabel>
+            <Select
+              label="Mesero destino"
+              value={transferirMesaForm.meseroId}
+              onChange={(e) => setTransferirMesaForm((prev) => ({ ...prev, meseroId: e.target.value }))}
+            >
+              {meseros.map((mesero) => (
+                <MenuItem key={mesero._id} value={mesero._id}>
+                  {mesero.nombre || mesero.email}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenTransferirMesaDialog(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={confirmarTransferenciaMesa}>Transferir</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
