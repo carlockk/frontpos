@@ -235,5 +235,26 @@ export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente
 
 export const eliminarPedidoWeb = (id) => API.delete('/ventasCliente/local/pedidos/' + id);
 
+// ─────────────────────────────────────────────
+// 🍽️ Restaurante
+// ─────────────────────────────────────────────
+export const obtenerMesasRestaurante = () => API.get('/restaurante/mesas');
+export const crearMesaRestaurante = (data) => API.post('/restaurante/mesas', data);
+export const actualizarEstadoMesaRestaurante = (id, data) =>
+  API.patch(`/restaurante/mesas/${id}/estado`, data);
+export const editarMesaRestaurante = (id, data) => API.put(`/restaurante/mesas/${id}`, data);
+export const eliminarMesaRestaurante = (id) => API.delete(`/restaurante/mesas/${id}`);
+export const obtenerComandasRestaurante = (params) =>
+  API.get('/restaurante/comandas', { params });
+export const crearComandaRestaurante = (data) => API.post('/restaurante/comandas', data);
+export const agregarItemsComandaRestaurante = (id, data) =>
+  API.post(`/restaurante/comandas/${id}/items`, data);
+export const actualizarEstadoComandaRestaurante = (id, data) =>
+  API.patch(`/restaurante/comandas/${id}/estado`, data);
+export const editarComandaRestaurante = (id, data) =>
+  API.put(`/restaurante/comandas/${id}`, data);
+export const eliminarComandaRestaurante = (id) =>
+  API.delete(`/restaurante/comandas/${id}`);
+
 
 

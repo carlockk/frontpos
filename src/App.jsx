@@ -30,6 +30,7 @@ import ConfigRecibo from './pages/ConfigRecibo';
 import Agregados from './pages/Agregados';
 import PedidosWeb from './pages/PedidosWeb';
 import SocialConfig from './pages/SocialConfig';
+import Restaurante from './pages/Restaurante';
 
 const drawerWidth = 320;
 
@@ -40,6 +41,10 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const isLoginRoute = location.pathname === '/login';
+  const esMesero = usuario?.rol === 'mesero';
+  const esAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
+  const usuarioGeneral = Boolean(usuario) && !esMesero;
+  const rutaInicio = esMesero ? '/restaurante' : '/';
 
   const toggleDrawer = () => setMobileOpen(!mobileOpen);
 
@@ -65,7 +70,7 @@ export default function App() {
           <Sidebar mobileOpen={mobileOpen} toggleDrawer={toggleDrawer} />
         )}
 
-        {!isLoginRoute && <PedidosWebWatcher />}
+        {!isLoginRoute && !esMesero && <PedidosWebWatcher />}
 
         <Box
           component="main"
@@ -87,44 +92,46 @@ export default function App() {
           }
         >
           <Routes>
-            <Route path="/login" element={!usuario ? <Login /> : <Navigate to="/dashboard" />} />
-            <Route path="/" element={usuario ? <Productos /> : <Navigate to="/login" />} />
+            <Route path="/login" element={!usuario ? <Login /> : <Navigate to={esMesero ? '/restaurante' : '/dashboard'} />} />
+            <Route path="/" element={!usuario ? <Navigate to="/login" /> : esMesero ? <Navigate to="/restaurante" /> : <Productos />} />
             <Route
               path="/crear"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <CrearProducto /> : <Navigate to="/" />}
+              element={esAdmin ? <CrearProducto /> : <Navigate to={rutaInicio} />}
             />
-            <Route path="/categorias" element={usuario ? <Categorias /> : <Navigate to="/login" />} />
+            <Route path="/categorias" element={usuarioGeneral ? <Categorias /> : <Navigate to={rutaInicio} />} />
             <Route
               path="/crear-usuario"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <CrearUsuario /> : <Navigate to="/" />}
+              element={esAdmin ? <CrearUsuario /> : <Navigate to={rutaInicio} />}
             />
             <Route
               path="/usuarios"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <ListaUsuarios /> : <Navigate to="/" />}
+              element={esAdmin ? <ListaUsuarios /> : <Navigate to={rutaInicio} />}
             />
-            <Route path="/pos" element={usuario ? <POS /> : <Navigate to="/login" />} />
-            <Route path="/dashboard" element={usuario ? <Dashboard /> : <Navigate to="/login" />} />
-            <Route path="/historial" element={usuario ? <Historial /> : <Navigate to="/login" />} />
-            <Route path="/caja" element={usuario ? <Caja /> : <Navigate to="/login" />} />
+            <Route path="/pos" element={usuarioGeneral ? <POS /> : <Navigate to={rutaInicio} />} />
+            <Route path="/dashboard" element={usuarioGeneral ? <Dashboard /> : <Navigate to={rutaInicio} />} />
+            <Route path="/historial" element={usuarioGeneral ? <Historial /> : <Navigate to={rutaInicio} />} />
+            <Route path="/caja" element={usuarioGeneral ? <Caja /> : <Navigate to={rutaInicio} />} />
             <Route
               path="/historial-cajas"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <HistorialCajas /> : <Navigate to="/" />}
+              element={esAdmin ? <HistorialCajas /> : <Navigate to={rutaInicio} />}
             />
-            <Route path="/ticket" element={<Ticket />} />
-            <Route path="/ticket-caja" element={<TicketCaja />} />
-            <Route path="/tickets-abiertos" element={usuario ? <TicketsAbiertos /> : <Navigate to="/login" />} />
-            <Route path="/pedidos-web" element={usuario ? <PedidosWeb /> : <Navigate to="/login" />} />
-            <Route path="/locales" element={usuario ? <Locales /> : <Navigate to="/login" />} />
-            <Route path="/insumos" element={usuario ? <Insumos /> : <Navigate to="/login" />} />
-            <Route path="/agregados" element={usuario ? <Agregados /> : <Navigate to="/login" />} />
+            <Route path="/ticket" element={usuarioGeneral ? <Ticket /> : <Navigate to={rutaInicio} />} />
+            <Route path="/ticket-caja" element={usuarioGeneral ? <TicketCaja /> : <Navigate to={rutaInicio} />} />
+            <Route path="/tickets-abiertos" element={usuarioGeneral ? <TicketsAbiertos /> : <Navigate to={rutaInicio} />} />
+            <Route path="/pedidos-web" element={usuarioGeneral ? <PedidosWeb /> : <Navigate to={rutaInicio} />} />
+            <Route path="/restaurante" element={usuario ? <Restaurante /> : <Navigate to="/login" />} />
+            <Route path="/locales" element={usuarioGeneral ? <Locales /> : <Navigate to={rutaInicio} />} />
+            <Route path="/insumos" element={usuarioGeneral ? <Insumos /> : <Navigate to={rutaInicio} />} />
+            <Route path="/agregados" element={usuarioGeneral ? <Agregados /> : <Navigate to={rutaInicio} />} />
             <Route
               path="/social"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <SocialConfig /> : <Navigate to="/" />}
+              element={esAdmin ? <SocialConfig /> : <Navigate to={rutaInicio} />}
             />
             <Route
               path="/config-recibo"
-              element={usuario?.rol === 'admin' || usuario?.rol === 'superadmin' ? <ConfigRecibo /> : <Navigate to="/" />}
+              element={esAdmin ? <ConfigRecibo /> : <Navigate to={rutaInicio} />}
             />
+            <Route path="*" element={<Navigate to={usuario ? rutaInicio : '/login'} />} />
           </Routes>
         </Box>
       </Box>

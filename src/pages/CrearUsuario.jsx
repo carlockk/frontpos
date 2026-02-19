@@ -113,6 +113,7 @@ export default function CrearUsuario() {
       >
         <MenuItem value="admin">Admin</MenuItem>
         <MenuItem value="cajero">Cajero</MenuItem>
+        <MenuItem value="mesero">Mesero</MenuItem>
       </TextField>
 
       <TextField

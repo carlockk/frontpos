@@ -211,6 +211,7 @@ export default function ListaUsuarios() {
           >
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="cajero">Cajero</MenuItem>
+            <MenuItem value="mesero">Mesero</MenuItem>
           </TextField>
           <TextField
             select
@@ -291,6 +292,7 @@ export default function ListaUsuarios() {
           >
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="cajero">Cajero</MenuItem>
+            <MenuItem value="mesero">Mesero</MenuItem>
           </TextField>
           {usuario?.rol === 'superadmin' && (
             <TextField

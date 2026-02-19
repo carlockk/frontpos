@@ -38,6 +38,7 @@ import StorefrontIcon from '@mui/icons-material/StorefrontOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LanguageIcon from '@mui/icons-material/Language';
+import RestaurantIcon from '@mui/icons-material/Restaurant';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
@@ -54,6 +55,7 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { modoOscuro, toggleTema } = useThemeMode();
   const { cajaAbierta } = useCaja(); // ✅ Estado dinámico de caja
+  const esMesero = usuario?.rol === 'mesero';
 
   const [openMenus, setOpenMenus] = useState({
     caja: false,
@@ -203,6 +205,15 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           }
         }}
       >
+        {esMesero ? (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/restaurante" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><RestaurantIcon /></Box>
+              <ListItemText primary="Restaurante" />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <>
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/dashboard" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
             <Box sx={{ mr: 2 }}><DashboardIcon /></Box>
@@ -285,6 +296,13 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </ListItemButton>
         </ListItem>
 
+        <ListItem disablePadding>
+          <ListItemButton component={Link} to="/restaurante" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+            <Box sx={{ mr: 2 }}><RestaurantIcon /></Box>
+            <ListItemText primary="Restaurante" />
+          </ListItemButton>
+        </ListItem>
+
         {/* Historial */}
         <ListItem disablePadding>
           <ListItemButton component={Link} to="/historial" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
@@ -342,6 +360,8 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
                 </ListItemButton>
               </ListItem>
             )}
+          </>
+        )}
           </>
         )}
       </List>
