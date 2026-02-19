@@ -21,7 +21,7 @@ export default function ListaUsuarios() {
   const [locales, setLocales] = useState([]);
   const [open, setOpen] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
-  const [editData, setEditData] = useState({ rol: '', password: '', local: '' });
+  const [editData, setEditData] = useState({ nombre: '', rol: '', password: '', local: '' });
   const [createOpen, setCreateOpen] = useState(false);
   const [createData, setCreateData] = useState({
     nombre: '',
@@ -59,12 +59,18 @@ export default function ListaUsuarios() {
         ? usuario.local
         : usuario?.local?._id || '';
     setUsuarioEditando(usuario);
-    setEditData({ rol: usuario.rol, password: '', local: localId });
+    setEditData({
+      nombre: usuario?.nombre || '',
+      rol: usuario.rol,
+      password: '',
+      local: localId
+    });
     setOpen(true);
   };
 
   const handleGuardarCambios = async () => {
     const payload = {
+      nombre: (editData.nombre || '').trim(),
       rol: editData.rol
     };
     if (usuario?.rol === 'superadmin') {
@@ -193,6 +199,14 @@ export default function ListaUsuarios() {
           bgcolor: 'background.paper', p: 4, borderRadius: 2, width: 300
         }}>
           <Typography variant="h6" gutterBottom>✏️ Editar Usuario</Typography>
+          <TextField
+            label="Nombre"
+            name="nombre"
+            fullWidth
+            value={editData.nombre}
+            onChange={handleChange}
+            sx={{ mb: 2 }}
+          />
           <TextField
             label="Email"
             value={usuarioEditando?.email || ''}

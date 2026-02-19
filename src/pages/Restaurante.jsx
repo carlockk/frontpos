@@ -741,7 +741,7 @@ export default function Restaurante() {
 
             {comandaForm.items.map((item, idx) => (
               <Grid container spacing={1} key={`item-${idx}`} alignItems="center">
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={7}>
                   <FormControl fullWidth size="small">
                     <InputLabel>Producto</InputLabel>
                     <Select
@@ -757,7 +757,7 @@ export default function Restaurante() {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={2}>
+                <Grid item xs={12} md={1.5}>
                   <TextField
                     label="Cant."
                     type="number"
@@ -765,9 +765,10 @@ export default function Restaurante() {
                     value={item.cantidad}
                     onChange={(e) => updateComandaItem(idx, 'cantidad', e.target.value)}
                     fullWidth
+                    inputProps={{ min: 1, max: 9999 }}
                   />
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid item xs={12} md={2.5}>
                   <TextField
                     label="Nota"
                     size="small"
