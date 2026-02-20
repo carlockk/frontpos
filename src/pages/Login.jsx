@@ -35,8 +35,16 @@ export default function Login() {
       const res = await loginUsuario({ email, password });
       login(res.data);
       navigate('/dashboard');
-    } catch {
-      alert('Credenciales inválidas');
+    } catch (err) {
+      const status = err?.response?.status;
+      const backendMsg = err?.response?.data?.error;
+      if (!status) {
+        alert('No se pudo conectar al servidor (CORS/red).');
+      } else if (status === 401) {
+        alert(backendMsg || 'Credenciales inválidas');
+      } else {
+        alert(backendMsg || 'No se pudo iniciar sesión');
+      }
     } finally {
       setLoading(false);
     }

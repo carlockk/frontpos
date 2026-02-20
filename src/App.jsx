@@ -32,6 +32,7 @@ import Agregados from './pages/Agregados';
 import PedidosWeb from './pages/PedidosWeb';
 import SocialConfig from './pages/SocialConfig';
 import Restaurante from './pages/Restaurante';
+import CheckoutResult from './pages/CheckoutResult';
 import { LOCAL_REQUIRED_EVENT } from './services/api';
 
 const drawerWidth = 320;
@@ -109,6 +110,7 @@ export default function App() {
         >
           <Routes>
             <Route path="/login" element={!usuario ? <Login /> : <Navigate to={esMesero ? '/restaurante' : '/dashboard'} />} />
+            <Route path="/checkout/result" element={<CheckoutResult />} />
             <Route path="/" element={!usuario ? <Navigate to="/login" /> : esMesero ? <Navigate to="/restaurante" /> : <Productos />} />
             <Route
               path="/crear"

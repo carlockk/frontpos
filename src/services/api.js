@@ -331,5 +331,30 @@ export const cobrarComandaEnMesa = (id, data) => API.post(`/restaurante/comandas
 export const obtenerRendicionesPendientesCaja = () => API.get('/restaurante/caja/rendiciones-pendientes');
 export const rendirCobroMesaCaja = (id) => API.post(`/restaurante/caja/rendir/${id}`);
 
+// ─────────────────────────────────────────────
+// 💳 Webpay (Transbank)
+// ─────────────────────────────────────────────
+export const crearSesionPagoWeb = (order) => API.post('/pagos/crear-sesion', { order });
+export const confirmarSesionPagoWeb = (token_ws) => API.post('/pagos/confirmar-sesion', { token_ws });
+
+export const redirigirAWebpay = ({ url, token }) => {
+  if (!url || !token) {
+    throw new Error('Datos de redireccion Webpay incompletos');
+  }
+
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  form.style.display = 'none';
+
+  const tokenField = document.createElement('input');
+  tokenField.type = 'hidden';
+  tokenField.name = 'token_ws';
+  tokenField.value = token;
+
+  form.appendChild(tokenField);
+  document.body.appendChild(form);
+  form.submit();
+};
 
 
