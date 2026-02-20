@@ -10,15 +10,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem('usuario');
     if (stored) {
-      const parsed = JSON.parse(stored);
-      setUsuario(parsed);
-      if (parsed?.rol && parsed.rol !== 'superadmin') {
-        setSelectedLocal(parsed.local || null);
-      } else {
-        const storedLocal = localStorage.getItem('localSeleccionado');
-        if (storedLocal) {
-          setSelectedLocal(JSON.parse(storedLocal));
+      try {
+        const parsed = JSON.parse(stored);
+        if (!parsed?.token) {
+          localStorage.removeItem('usuario');
+          localStorage.removeItem('localSeleccionado');
+          return;
         }
+        setUsuario(parsed);
+        if (parsed?.rol && parsed.rol !== 'superadmin') {
+          setSelectedLocal(parsed.local || null);
+        } else {
+          const storedLocal = localStorage.getItem('localSeleccionado');
+          if (storedLocal) {
+            setSelectedLocal(JSON.parse(storedLocal));
+          }
+        }
+      } catch (_err) {
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('localSeleccionado');
       }
     }
   }, []);

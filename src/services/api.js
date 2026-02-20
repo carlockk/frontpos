@@ -20,42 +20,31 @@ API.interceptors.request.use((config) => {
   const stored = localStorage.getItem('usuario');
   const storedLocal = localStorage.getItem('localSeleccionado');
 
+  let token = '';
   let role = '';
   let localId = '';
-  let userId = '';
 
   if (stored) {
     try {
       const usuario = JSON.parse(stored);
+      token = typeof usuario?.token === 'string' ? usuario.token : '';
       role = typeof usuario?.rol === 'string' ? usuario.rol : '';
-      userId = usuario?._id || '';
       if (role && role !== 'superadmin') {
-        if (typeof usuario?.local === 'string') {
-          localId = usuario.local;
-        } else {
-          localId = usuario?.local?._id || '';
-        }
+        localId = typeof usuario?.local === 'string' ? usuario.local : (usuario?.local?._id || '');
       } else if (storedLocal) {
         const localParsed = JSON.parse(storedLocal);
-        if (typeof localParsed === 'string') {
-          localId = localParsed;
-        } else {
-          localId = localParsed?._id || '';
-        }
+        localId = typeof localParsed === 'string' ? localParsed : (localParsed?._id || '');
       }
     } catch (err) {
       // ignore parse errors
     }
   }
 
-  if (role) {
-    config.headers['x-user-role'] = role;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  if (localId) {
+  if (localId && role === 'superadmin') {
     config.headers['x-local-id'] = localId;
-  }
-  if (userId) {
-    config.headers['x-user-id'] = userId;
   }
 
   return config;
