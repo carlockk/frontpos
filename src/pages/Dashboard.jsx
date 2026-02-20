@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Box, Typography, Card, CardContent, useTheme,
-  useMediaQuery, Divider, Button, Paper, Stack,
+  useMediaQuery, Divider, Paper, Stack,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
@@ -111,15 +111,8 @@ export default function Dashboard() {
 
   return (
     <Box sx={{ mt: 4, px: isMobile ? 2 : 4 }}>
-      <Typography
-        variant="h4"
-        gutterBottom
-        align={isMobile ? 'center' : 'left'}
-        sx={{
-          color: theme.palette.mode === 'dark' ? '#e2e8f0' : 'inherit'
-        }}
-      >
-        📈 Resumen de Ventas
+      <Typography variant="h5" gutterBottom>
+        Resumen de Ventas
       </Typography>
 
       <Box sx={{ mb: 3 }}>
@@ -135,7 +128,8 @@ export default function Dashboard() {
           onChange={(dates) => setRangoFechas([...dates])} // 🔥 Evitamos mutaciones directas
           format="YYYY-MM-DD"
           style={{
-            padding: '8px',
+            height: 44,
+            padding: '0 12px',
             width: isMobile ? '100%' : 260,
             backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
@@ -143,22 +137,31 @@ export default function Dashboard() {
             borderRadius: 8
           }}
         />
-        <Button
-          variant="outlined"
-          color="secondary"
+        <Typography
+          component="span"
+          role="button"
+          tabIndex={0}
           sx={{
             mt: 1,
             ml: 1,
-            borderColor: theme.palette.mode === 'dark' ? alpha('#fff', 0.2) : undefined,
-            color: theme.palette.mode === 'dark' ? '#e2e8f0' : undefined
+            color: theme.palette.mode === 'dark' ? alpha('#fff', 0.85) : theme.palette.text.secondary,
+            cursor: 'pointer',
+            userSelect: 'none'
           }}
           onClick={() => {
             setRangoFechas([]);
             setResumen(null);
           }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              setRangoFechas([]);
+              setResumen(null);
+            }
+          }}
         >
           Limpiar
-        </Button>
+        </Typography>
       </Box>
 
       {resumen ? (

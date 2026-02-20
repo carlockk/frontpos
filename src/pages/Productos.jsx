@@ -393,7 +393,7 @@ export default function Productos() {
           mb: 3
         }}
       >
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h5" gutterBottom>
           Gestion de Productos
         </Typography>
         <Stack direction="row" spacing={1}>
