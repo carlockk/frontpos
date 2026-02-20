@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export const LOCAL_REQUIRED_EVENT = 'app:local-required';
+
 // ✅ Resolver base de API y base de archivos a partir de la variable de entorno
 const rawBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
 
@@ -15,6 +17,41 @@ export const FILES_BASE = API_BASE.replace(/\/api\/?$/, '');
 const API = axios.create({
   baseURL: API_BASE,
 });
+
+let lastLocalRequiredNoticeAt = 0;
+
+const buildFallbackDataByUrl = (url = '') => {
+  const lower = String(url).toLowerCase();
+
+  if (lower.includes('/ventas/resumen-rango')) {
+    return {
+      total: 0,
+      cantidad: 0,
+      porTipoPago: {},
+      porTipoProducto: {},
+      porProducto: [],
+      totalesPorCanal: {
+        POS: { total: 0, cantidad: 0 },
+        WEB: { total: 0, cantidad: 0 },
+      },
+      porTipoPagoDetallado: {
+        POS: {},
+        WEB: {},
+      },
+    };
+  }
+
+  if (
+    lower.includes('/caja/historial') ||
+    lower.includes('/categorias') ||
+    lower.includes('/productos') ||
+    lower.includes('/agregados')
+  ) {
+    return [];
+  }
+
+  return null;
+};
 
 API.interceptors.request.use((config) => {
   const stored = localStorage.getItem('usuario');
@@ -49,6 +86,44 @@ API.interceptors.request.use((config) => {
 
   return config;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const backendMessage = String(error?.response?.data?.error || '').toLowerCase();
+    const isLocalRequired = status === 400 && backendMessage.includes('local requerido');
+    const method = String(error?.config?.method || '').toLowerCase();
+    const url = String(error?.config?.url || '');
+
+    if (isLocalRequired && typeof window !== 'undefined') {
+      const now = Date.now();
+      if (now - lastLocalRequiredNoticeAt > 2500) {
+        lastLocalRequiredNoticeAt = now;
+        window.dispatchEvent(
+          new CustomEvent(LOCAL_REQUIRED_EVENT, {
+            detail: { message: 'Debes seleccionar un local para continuar.' },
+          })
+        );
+      }
+    }
+
+    if (isLocalRequired && method === 'get') {
+      const fallbackData = buildFallbackDataByUrl(url);
+      if (fallbackData !== null) {
+        return Promise.resolve({
+          data: fallbackData,
+          status: 200,
+          statusText: 'OK',
+          headers: error?.response?.headers || {},
+          config: error?.config || {},
+        });
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // ─────────────────────────────────────────────
 // 🛍️ Productos

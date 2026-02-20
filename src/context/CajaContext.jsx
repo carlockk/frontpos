@@ -19,7 +19,9 @@ export function CajaProvider({ children }) {
         const abierta = data.find(c => !c.cierre);
         setCajaAbierta(!!abierta);
       } catch (error) {
-        console.error('Error al verificar caja en contexto:', error);
+        if (import.meta.env.DEV) {
+          console.error('Error al verificar caja en contexto:', error);
+        }
       } finally {
         setCajaVerificada(true);
       }

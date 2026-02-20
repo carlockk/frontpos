@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  AppBar, Toolbar, IconButton, Typography, Box, CssBaseline, useMediaQuery
+  AppBar, Toolbar, IconButton, Typography, Box, CssBaseline, useMediaQuery, Snackbar, Alert
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -32,6 +32,7 @@ import Agregados from './pages/Agregados';
 import PedidosWeb from './pages/PedidosWeb';
 import SocialConfig from './pages/SocialConfig';
 import Restaurante from './pages/Restaurante';
+import { LOCAL_REQUIRED_EVENT } from './services/api';
 
 const drawerWidth = 320;
 
@@ -40,6 +41,8 @@ export default function App() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [localNoticeOpen, setLocalNoticeOpen] = useState(false);
+  const [localNoticeMessage, setLocalNoticeMessage] = useState('');
   const location = useLocation();
   const isLoginRoute = location.pathname === '/login';
   const esMesero = usuario?.rol === 'mesero';
@@ -48,6 +51,17 @@ export default function App() {
   const rutaInicio = esMesero ? '/restaurante' : '/';
 
   const toggleDrawer = () => setMobileOpen(!mobileOpen);
+
+  useEffect(() => {
+    const handler = (event) => {
+      const message = event?.detail?.message || 'Debes seleccionar un local para continuar.';
+      setLocalNoticeMessage(message);
+      setLocalNoticeOpen(true);
+    };
+
+    window.addEventListener(LOCAL_REQUIRED_EVENT, handler);
+    return () => window.removeEventListener(LOCAL_REQUIRED_EVENT, handler);
+  }, []);
 
   return (
     <CajaProvider>
@@ -136,6 +150,22 @@ export default function App() {
             <Route path="*" element={<Navigate to={usuario ? rutaInicio : '/login'} />} />
           </Routes>
         </Box>
+
+        <Snackbar
+          open={localNoticeOpen}
+          autoHideDuration={3500}
+          onClose={() => setLocalNoticeOpen(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            severity="warning"
+            variant="filled"
+            onClose={() => setLocalNoticeOpen(false)}
+            sx={{ width: '100%' }}
+          >
+            {localNoticeMessage}
+          </Alert>
+        </Snackbar>
       </Box>
     </CajaProvider>
   );

@@ -45,7 +45,9 @@ export default function Dashboard() {
         const esHoy = inicio === hoy && fin === hoy;
         setSinDatosHoy(esHoy && Number(res.data?.cantidad || 0) === 0);
       } catch (err) {
-        console.error('Error al obtener resumen por rango:', err);
+        if (import.meta.env.DEV) {
+          console.error('Error al obtener resumen por rango:', err);
+        }
       }
     };
 
