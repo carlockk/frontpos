@@ -49,7 +49,8 @@ export default function CrearUsuario() {
       alert('Todos los campos son obligatorios');
       return;
     }
-    if (rol !== 'superadmin' && !local) {
+    const repartidorGlobal = usuario?.rol === 'superadmin' && rol === 'repartidor' && local === '__all__';
+    if (rol !== 'superadmin' && !local && !repartidorGlobal) {
       alert('Selecciona un local para el usuario');
       return;
     }
@@ -60,7 +61,9 @@ export default function CrearUsuario() {
         email,
         password,
         rol,
-        local: usuario?.rol === 'superadmin' ? (local || null) : usuario?.local?._id || null
+        local: usuario?.rol === 'superadmin'
+          ? (repartidorGlobal ? null : (local || null))
+          : usuario?.local?._id || null
       });
       alert('✅ Usuario creado correctamente');
       setForm({ nombre: '', email: '', password: '', rol: 'cajero', local: '' });
@@ -114,6 +117,7 @@ export default function CrearUsuario() {
         <MenuItem value="admin">Admin</MenuItem>
         <MenuItem value="cajero">Cajero</MenuItem>
         <MenuItem value="mesero">Mesero</MenuItem>
+        <MenuItem value="repartidor">Repartidor</MenuItem>
       </TextField>
 
       <TextField
@@ -126,6 +130,9 @@ export default function CrearUsuario() {
         sx={{ mb: 2 }}
         disabled={usuario?.rol !== 'superadmin' || locales.length === 0}
       >
+        {form.rol === 'repartidor' && usuario?.rol === 'superadmin' && (
+          <MenuItem value="__all__">Todos los locales (repartidor global)</MenuItem>
+        )}
         <MenuItem value="">
           {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
         </MenuItem>

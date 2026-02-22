@@ -58,12 +58,13 @@ export default function ListaUsuarios() {
       typeof usuario?.local === 'string'
         ? usuario.local
         : usuario?.local?._id || '';
+    const localEdit = usuario?.rol === 'repartidor' && !localId ? '__all__' : localId;
     setUsuarioEditando(usuario);
     setEditData({
       nombre: usuario?.nombre || '',
       rol: usuario.rol,
       password: '',
-      local: localId
+      local: localEdit
     });
     setOpen(true);
   };
@@ -74,7 +75,9 @@ export default function ListaUsuarios() {
       rol: editData.rol
     };
     if (usuario?.rol === 'superadmin') {
-      payload.local = editData.local === '' ? null : editData.local;
+      payload.local = editData.local === '__all__'
+        ? null
+        : (editData.local === '' ? null : editData.local);
     }
     if (editData.password && editData.password.trim()) {
       payload.password = editData.password;
@@ -111,7 +114,8 @@ export default function ListaUsuarios() {
       setCreateError('Nombre, email y contraseña son obligatorios.');
       return;
     }
-    if (usuario?.rol === 'superadmin' && !createData.local) {
+    const repartidorGlobal = usuario?.rol === 'superadmin' && createData.rol === 'repartidor' && createData.local === '__all__';
+    if (usuario?.rol === 'superadmin' && !createData.local && !repartidorGlobal) {
       setCreateError('Selecciona un local para el usuario.');
       return;
     }
@@ -121,7 +125,9 @@ export default function ListaUsuarios() {
         email: createData.email.trim(),
         password: createData.password,
         rol: createData.rol,
-        local: usuario?.rol === 'superadmin' ? createData.local : undefined
+        local: usuario?.rol === 'superadmin'
+          ? (repartidorGlobal ? null : createData.local)
+          : undefined
       });
       setCreateOpen(false);
       cargarUsuarios();
@@ -226,6 +232,7 @@ export default function ListaUsuarios() {
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="cajero">Cajero</MenuItem>
             <MenuItem value="mesero">Mesero</MenuItem>
+            <MenuItem value="repartidor">Repartidor</MenuItem>
           </TextField>
           <TextField
             select
@@ -237,6 +244,9 @@ export default function ListaUsuarios() {
             sx={{ mb: 2 }}
             disabled={usuario?.rol !== 'superadmin' || locales.length === 0}
           >
+            {editData.rol === 'repartidor' && usuario?.rol === 'superadmin' && (
+              <MenuItem value="__all__">Todos los locales (repartidor global)</MenuItem>
+            )}
             <MenuItem value="">
               {locales.length === 0 ? 'No hay locales disponibles' : 'Sin asignar'}
             </MenuItem>
@@ -307,6 +317,7 @@ export default function ListaUsuarios() {
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="cajero">Cajero</MenuItem>
             <MenuItem value="mesero">Mesero</MenuItem>
+            <MenuItem value="repartidor">Repartidor</MenuItem>
           </TextField>
           {usuario?.rol === 'superadmin' && (
             <TextField
@@ -318,6 +329,9 @@ export default function ListaUsuarios() {
               onChange={handleCreateChange}
               sx={{ mb: 2 }}
             >
+              {createData.rol === 'repartidor' && (
+                <MenuItem value="__all__">Todos los locales (repartidor global)</MenuItem>
+              )}
               <MenuItem value="">
                 {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
               </MenuItem>

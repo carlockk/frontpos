@@ -29,6 +29,8 @@ import {
   editarEstadoPedidoWeb,
   eliminarEstadoPedidoWeb,
   eliminarPedidoWeb,
+  guardarEstadosRepartidorPedidoWeb,
+  obtenerEstadosRepartidorPedidoWeb,
   obtenerEstadosPedidoWeb,
   obtenerPedidosWeb
 } from '../services/api';
@@ -72,6 +74,8 @@ export default function PedidosWeb() {
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
   const [creandoEstado, setCreandoEstado] = useState(false);
+  const [guardandoEstadosRepartidor, setGuardandoEstadosRepartidor] = useState(false);
+  const [estadosRepartidor, setEstadosRepartidor] = useState([]);
   const [estadoEditando, setEstadoEditando] = useState('');
   const [estadoNuevoValor, setEstadoNuevoValor] = useState('');
   const [actualizandoEstado, setActualizandoEstado] = useState(false);
@@ -116,9 +120,24 @@ export default function PedidosWeb() {
     }
   };
 
+  const cargarEstadosRepartidor = async () => {
+    if (!localId) {
+      setEstadosRepartidor([]);
+      return;
+    }
+    try {
+      const res = await obtenerEstadosRepartidorPedidoWeb();
+      const data = Array.isArray(res?.data?.estados) ? res.data.estados : [];
+      setEstadosRepartidor(data.map((item) => String(item).toLowerCase()));
+    } catch {
+      setEstadosRepartidor([]);
+    }
+  };
+
   useEffect(() => {
     cargarPedidos();
     cargarEstados();
+    cargarEstadosRepartidor();
   }, [localId]);
 
   useEffect(() => {
@@ -177,11 +196,29 @@ export default function PedidosWeb() {
       const res = await crearEstadoPedidoWeb({ estado: estadoLimpio });
       const lista = Array.isArray(res?.data?.estados) ? res.data.estados : [];
       setEstados(lista.length > 0 ? lista : estados);
+      if (lista.some((item) => String(item).toLowerCase() === estadoLimpio)) {
+        setEstadosRepartidor((prev) => (prev.includes(estadoLimpio) ? prev : [...prev, estadoLimpio]));
+      }
       setNuevoEstado('');
     } catch (err) {
       alert(err?.response?.data?.error || 'No se pudo crear el estado');
     } finally {
       setCreandoEstado(false);
+    }
+  };
+
+  const guardarEstadosRepartidor = async () => {
+    if (!puedeCrearEstados || !localId) return;
+    setGuardandoEstadosRepartidor(true);
+    try {
+      const res = await guardarEstadosRepartidorPedidoWeb(estadosRepartidor);
+      const lista = Array.isArray(res?.data?.estados) ? res.data.estados : estadosRepartidor;
+      setEstadosRepartidor(lista.map((item) => String(item).toLowerCase()));
+      alert('Estados de repartidor actualizados');
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudieron guardar estados para repartidor');
+    } finally {
+      setGuardandoEstadosRepartidor(false);
     }
   };
 
@@ -220,6 +257,9 @@ export default function PedidosWeb() {
       setEstados(lista.length > 0 ? lista : estados);
       setEstadoEditando('');
       setEstadoNuevoValor('');
+      setEstadosRepartidor((prev) =>
+        prev.map((item) => (item === String(estadoActual).toLowerCase() ? nuevo : item))
+      );
       if (pedidoActivo) {
         setEstadoEdicion((prev) => (prev === estadoActual ? nuevo : prev));
       }
@@ -244,6 +284,7 @@ export default function PedidosWeb() {
         setEstadoEditando('');
         setEstadoNuevoValor('');
       }
+      setEstadosRepartidor((prev) => prev.filter((item) => item !== String(estado).toLowerCase()));
     } catch (err) {
       alert(err?.response?.data?.error || 'No se pudo eliminar el estado');
     } finally {
@@ -359,6 +400,38 @@ export default function PedidosWeb() {
               </TableContainer>
             </AccordionDetails>
           </Accordion>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>Estados habilitados para repartidor</Typography>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'stretch', md: 'center' }}>
+              <Select
+                fullWidth
+                size="small"
+                multiple
+                value={estadosRepartidor}
+                onChange={(e) =>
+                  setEstadosRepartidor(
+                    (Array.isArray(e.target.value) ? e.target.value : [])
+                      .map((item) => String(item).toLowerCase())
+                  )
+                }
+                renderValue={(selected) => (selected || []).join(', ')}
+              >
+                {estados.map((estado) => (
+                  <MenuItem key={estado} value={String(estado).toLowerCase()}>
+                    {estado}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Button
+                variant="contained"
+                disabled={guardandoEstadosRepartidor || estadosRepartidor.length === 0}
+                onClick={guardarEstadosRepartidor}
+              >
+                Guardar para repartidor
+              </Button>
+            </Stack>
+          </Box>
         </Paper>
       )}
 
