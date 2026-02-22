@@ -294,6 +294,9 @@ export const editarEstadoPedidoWeb = (estadoActual, data) =>
 export const eliminarEstadoPedidoWeb = (estado) =>
   API.delete(`/ventasCliente/local/estados/${encodeURIComponent(estado)}`);
 export const actualizarEstadoPedidoWeb = (id, data) => API.patch(`/ventasCliente/local/pedidos/${id}/estado`, data);
+export const obtenerRepartidoresPedidoWeb = () => API.get('/ventasCliente/local/repartidores');
+export const asignarRepartidorPedidoWeb = (id, repartidor_id) =>
+  API.patch(`/ventasCliente/local/pedidos/${id}/repartidor`, { repartidor_id });
 
 
 

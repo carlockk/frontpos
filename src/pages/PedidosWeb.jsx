@@ -25,11 +25,13 @@ import {
 import { useLocation } from 'react-router-dom';
 import {
   actualizarEstadoPedidoWeb,
+  asignarRepartidorPedidoWeb,
   crearEstadoPedidoWeb,
   editarEstadoPedidoWeb,
   eliminarEstadoPedidoWeb,
   eliminarPedidoWeb,
   guardarEstadosRepartidorPedidoWeb,
+  obtenerRepartidoresPedidoWeb,
   obtenerEstadosRepartidorPedidoWeb,
   obtenerEstadosPedidoWeb,
   obtenerPedidosWeb
@@ -61,6 +63,14 @@ const getLocalId = (selectedLocal, usuario) => {
 const getPedidoDate = (pedido) =>
   new Date(pedido?.fecha || pedido?.createdAt || pedido?.updatedAt || 0).getTime();
 
+const esPedidoDelivery = (pedido) => {
+  const tipo = String(pedido?.tipo_pedido || '').toLowerCase();
+  if (tipo === 'delivery' || tipo === 'domicilio') return true;
+  return Array.isArray(pedido?.productos) && pedido.productos.some((prod) =>
+    String(prod?.observacion || '').toLowerCase().includes('delivery:')
+  );
+};
+
 export default function PedidosWeb() {
   const { usuario, selectedLocal } = useAuth();
   const location = useLocation();
@@ -70,6 +80,8 @@ export default function PedidosWeb() {
   const [estados, setEstados] = useState(ESTADOS_DEFAULT);
   const [nuevoEstado, setNuevoEstado] = useState('');
   const [loading, setLoading] = useState(false);
+  const [repartidores, setRepartidores] = useState([]);
+  const [asignandoRepartidorId, setAsignandoRepartidorId] = useState('');
   const [pedidoActivo, setPedidoActivo] = useState(null);
   const [estadoEdicion, setEstadoEdicion] = useState('pendiente');
   const [guardandoEstado, setGuardandoEstado] = useState(false);
@@ -86,6 +98,7 @@ export default function PedidosWeb() {
   const puedeGestionar = ['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '');
   const puedeCrearEstados = ['admin', 'superadmin'].includes(usuario?.rol || '');
   const puedeEliminarPedidos = ['admin', 'superadmin'].includes(usuario?.rol || '');
+  const puedeAsignarRepartidor = ['admin', 'superadmin', 'cajero'].includes(usuario?.rol || '');
 
   const cargarPedidos = async () => {
     if (!localId) {
@@ -134,10 +147,24 @@ export default function PedidosWeb() {
     }
   };
 
+  const cargarRepartidores = async () => {
+    if (!localId) {
+      setRepartidores([]);
+      return;
+    }
+    try {
+      const res = await obtenerRepartidoresPedidoWeb();
+      setRepartidores(Array.isArray(res?.data) ? res.data : []);
+    } catch {
+      setRepartidores([]);
+    }
+  };
+
   useEffect(() => {
     cargarPedidos();
     cargarEstados();
     cargarEstadosRepartidor();
+    cargarRepartidores();
   }, [localId]);
 
   useEffect(() => {
@@ -238,6 +265,28 @@ export default function PedidosWeb() {
       alert(err?.response?.data?.error || 'No se pudo eliminar el pedido');
     } finally {
       setEliminandoPedido(false);
+    }
+  };
+
+  const asignarRepartidor = async (pedido, repartidorId) => {
+    if (!pedido?._id || !puedeAsignarRepartidor) return;
+    if (!esPedidoDelivery(pedido)) {
+      alert('Solo se puede asignar repartidor a pedidos delivery.');
+      return;
+    }
+
+    setAsignandoRepartidorId(pedido._id);
+    try {
+      const res = await asignarRepartidorPedidoWeb(pedido._id, repartidorId || null);
+      const actualizado = res?.data;
+      setPedidos((prev) => prev.map((p) => (p._id === actualizado._id ? actualizado : p)));
+      if (pedidoActivo?._id === actualizado._id) {
+        setPedidoActivo(actualizado);
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || 'No se pudo asignar repartidor');
+    } finally {
+      setAsignandoRepartidorId('');
     }
   };
 
@@ -451,6 +500,7 @@ export default function PedidosWeb() {
               <TableCell>Cliente</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Estado</TableCell>
+              <TableCell>Repartidor</TableCell>
               <TableCell align="right">Accion</TableCell>
             </TableRow>
           </TableHead>
@@ -463,6 +513,26 @@ export default function PedidosWeb() {
                 <TableCell>${Number(pedido.total || 0).toLocaleString('es-CL')}</TableCell>
                 <TableCell>
                   <Chip size="small" label={getEstado(pedido)} />
+                </TableCell>
+                <TableCell sx={{ minWidth: 220 }}>
+                  {esPedidoDelivery(pedido) ? (
+                    <Select
+                      size="small"
+                      fullWidth
+                      value={pedido?.repartidor_asignado?._id || ''}
+                      disabled={!puedeAsignarRepartidor || asignandoRepartidorId === pedido._id}
+                      onChange={(e) => asignarRepartidor(pedido, e.target.value)}
+                    >
+                      <MenuItem value="">Sin asignar</MenuItem>
+                      {repartidores.map((rep) => (
+                        <MenuItem key={rep._id} value={rep._id}>
+                          {rep.nombre || rep.email}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">No aplica</Typography>
+                  )}
                 </TableCell>
                 <TableCell align="right">
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
@@ -493,7 +563,7 @@ export default function PedidosWeb() {
             ))}
             {pedidosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={7} align="center">
                   {loading ? 'Cargando pedidos...' : 'Sin pedidos en esta pestana'}
                 </TableCell>
               </TableRow>
@@ -514,6 +584,9 @@ export default function PedidosWeb() {
             <Typography><strong>Cliente:</strong> {getClienteLabel(pedidoActivo)}</Typography>
             <Typography><strong>Fecha:</strong> {new Date(pedidoActivo.fecha || pedidoActivo.createdAt || Date.now()).toLocaleString()}</Typography>
             <Typography><strong>Total:</strong> ${Number(pedidoActivo.total || 0).toLocaleString('es-CL')}</Typography>
+            <Typography>
+              <strong>Tipo:</strong> {esPedidoDelivery(pedidoActivo) ? 'delivery' : (pedidoActivo?.tipo_pedido || 'tienda')}
+            </Typography>
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Estado del pedido</Typography>
@@ -538,6 +611,26 @@ export default function PedidosWeb() {
                 </Button>
               </Stack>
             </Box>
+
+            {esPedidoDelivery(pedidoActivo) && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Asignar repartidor</Typography>
+                <Select
+                  size="small"
+                  fullWidth
+                  value={pedidoActivo?.repartidor_asignado?._id || ''}
+                  disabled={!puedeAsignarRepartidor || asignandoRepartidorId === pedidoActivo._id}
+                  onChange={(e) => asignarRepartidor(pedidoActivo, e.target.value)}
+                >
+                  <MenuItem value="">Sin asignar</MenuItem>
+                  {repartidores.map((rep) => (
+                    <MenuItem key={rep._id} value={rep._id}>
+                      {rep.nombre || rep.email}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+            )}
 
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>Detalle</Typography>
