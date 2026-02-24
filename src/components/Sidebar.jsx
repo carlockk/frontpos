@@ -2,6 +2,7 @@ import {
   Drawer,
   Box,
   Typography,
+  Alert,
   Divider,
   List,
   ListItem,
@@ -12,6 +13,10 @@ import {
   useMediaQuery,
   IconButton,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   FormControl,
   InputLabel,
   Select,
@@ -24,7 +29,7 @@ import LogoutIcon from '@mui/icons-material/LogoutOutlined';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useCaja } from '../context/CajaContext';
-import { obtenerLocales } from '../services/api';
+import { guardarLogoWebCliente, obtenerConfigSocial, obtenerLocales } from '../services/api';
 
 // Icons
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
@@ -63,6 +68,12 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
   });
   const [locales, setLocales] = useState([]);
   const [localesLoading, setLocalesLoading] = useState(false);
+  const [logoDialogOpen, setLogoDialogOpen] = useState(false);
+  const [logoWebUrl, setLogoWebUrl] = useState('');
+  const [logoWebActual, setLogoWebActual] = useState('');
+  const [logoWebFile, setLogoWebFile] = useState(null);
+  const [logoWebSaving, setLogoWebSaving] = useState(false);
+  const [logoWebError, setLogoWebError] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebarMenus');
@@ -106,6 +117,46 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     setOpenMenus((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const abrirDialogLogoWeb = async () => {
+    setLogoWebError('');
+    setLogoWebFile(null);
+    try {
+      const res = await obtenerConfigSocial();
+      const current = String(res?.data?.logo_url || '').trim();
+      setLogoWebActual(current);
+      setLogoWebUrl(current);
+    } catch (_err) {
+      setLogoWebActual('');
+      setLogoWebUrl('');
+    }
+    setLogoDialogOpen(true);
+  };
+
+  const guardarLogoWeb = async (removeLogo = false) => {
+    setLogoWebSaving(true);
+    setLogoWebError('');
+    try {
+      const data = new FormData();
+      data.append('remove_logo', removeLogo ? 'true' : 'false');
+      if (!removeLogo) {
+        data.append('logo_url', logoWebUrl.trim());
+      }
+      if (logoWebFile) {
+        data.append('logo', logoWebFile);
+      }
+      const res = await guardarLogoWebCliente(data);
+      const current = String(res?.data?.logo_url || '').trim();
+      setLogoWebActual(current);
+      setLogoWebUrl(current);
+      setLogoWebFile(null);
+      setLogoDialogOpen(false);
+    } catch (err) {
+      setLogoWebError(err?.response?.data?.error || 'No se pudo guardar el logo web.');
+    } finally {
+      setLogoWebSaving(false);
+    }
+  };
+
   const drawerContent = (
     <Box
       sx={{
@@ -136,6 +187,18 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     <Typography variant="body2" sx={{ mt: 0.5, color: '#9ca3af', display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
       📍 {usuario.local.nombre}
     </Typography>
+  )}
+  {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'center' }}>
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={abrirDialogLogoWeb}
+        sx={{ color: '#93c5fd', borderColor: '#93c5fd', textTransform: 'none' }}
+      >
+        Cambiar logo web cliente
+      </Button>
+    </Box>
   )}
   {usuario?.rol === 'superadmin' && (
     <Box sx={{ mt: 2 }}>
@@ -404,6 +467,54 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           </Button>
         </Box>
       )}
+
+      <Dialog open={logoDialogOpen} onClose={() => setLogoDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Cambiar logo frontend cliente</DialogTitle>
+        <DialogContent dividers>
+          {logoWebError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {logoWebError}
+            </Alert>
+          )}
+          {!!logoWebActual && (
+            <Box sx={{ mb: 2, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ mb: 1 }}>Logo actual</Typography>
+              <img src={logoWebActual} alt="Logo web cliente" style={{ maxHeight: 70, maxWidth: '100%' }} />
+            </Box>
+          )}
+          <TextField
+            fullWidth
+            label="URL del logo (opcional)"
+            placeholder="https://..."
+            value={logoWebUrl}
+            onChange={(e) => setLogoWebUrl(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Button variant="outlined" component="label">
+            Subir imagen
+            <input
+              hidden
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLogoWebFile(e.target.files?.[0] || null)}
+            />
+          </Button>
+          {logoWebFile && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Archivo: {logoWebFile.name}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogoDialogOpen(false)}>Cancelar</Button>
+          <Button color="error" onClick={() => guardarLogoWeb(true)} disabled={logoWebSaving}>
+            Quitar logo
+          </Button>
+          <Button variant="contained" onClick={() => guardarLogoWeb(false)} disabled={logoWebSaving}>
+            {logoWebSaving ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 
