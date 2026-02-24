@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 export const LOCAL_REQUIRED_EVENT = 'app:local-required';
+export const SESSION_EXPIRED_EVENT = 'app:session-expired';
 
 // ✅ Resolver base de API y base de archivos a partir de la variable de entorno
 const rawBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
@@ -91,10 +92,18 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
+    const url = String(error?.config?.url || '');
     const backendMessage = String(error?.response?.data?.error || '').toLowerCase();
     const isLocalRequired = status === 400 && backendMessage.includes('local requerido');
     const method = String(error?.config?.method || '').toLowerCase();
-    const url = String(error?.config?.url || '');
+
+    if (status === 401 && !url.includes('/auth/login') && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent(SESSION_EXPIRED_EVENT, {
+          detail: { message: 'Tu sesion expiro. Inicia sesion nuevamente.' },
+        })
+      );
+    }
 
     if (isLocalRequired && typeof window !== 'undefined') {
       const now = Date.now();
