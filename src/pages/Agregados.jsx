@@ -3,10 +3,12 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   MenuItem,
   Paper,
@@ -22,6 +24,7 @@ import {
 import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import {
+  clonarAgregados,
   crearAgregado,
   crearGrupoAgregados,
   editarAgregado,
@@ -31,6 +34,7 @@ import {
   obtenerAgregados,
   obtenerCategorias,
   obtenerGruposAgregados,
+  obtenerLocales,
   obtenerProductos
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -54,6 +58,7 @@ export default function Agregados() {
   const [agregados, setAgregados] = useState([]);
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
+  const [locales, setLocales] = useState([]);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
 
@@ -64,6 +69,12 @@ export default function Agregados() {
   const [agregadoOpen, setAgregadoOpen] = useState(false);
   const [agregadoForm, setAgregadoForm] = useState(emptyAgregado);
   const [agregadoEditId, setAgregadoEditId] = useState('');
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneLocal, setCloneLocal] = useState('');
+  const [cloneAgregados, setCloneAgregados] = useState([]);
+  const [cloneAgregadoId, setCloneAgregadoId] = useState('');
+  const [cloneAll, setCloneAll] = useState(false);
+  const [cloneLoading, setCloneLoading] = useState(false);
 
   const productosOptions = useMemo(
     () =>
@@ -94,7 +105,24 @@ export default function Agregados() {
 
   useEffect(() => {
     cargar();
+    if (usuario?.rol === 'superadmin') {
+      obtenerLocales()
+        .then((res) => setLocales(res.data || []))
+        .catch(() => setLocales([]));
+    } else {
+      setLocales([]);
+    }
   }, [selectedLocal?._id]);
+
+  useEffect(() => {
+    if (!cloneLocal) {
+      setCloneAgregados([]);
+      return;
+    }
+    obtenerAgregados(cloneLocal)
+      .then((res) => setCloneAgregados(res.data || []))
+      .catch(() => setCloneAgregados([]));
+  }, [cloneLocal]);
 
   const openCrearGrupo = () => {
     setGrupoEditId('');
@@ -204,6 +232,38 @@ export default function Agregados() {
     }
   };
 
+  const abrirClonar = () => {
+    setCloneOpen(true);
+    setCloneLocal('');
+    setCloneAgregados([]);
+    setCloneAgregadoId('');
+    setCloneAll(false);
+    setError('');
+  };
+
+  const ejecutarClonado = async () => {
+    if (!cloneLocal || (!cloneAll && !cloneAgregadoId)) {
+      setError('Selecciona local origen y agregado a clonar.');
+      return;
+    }
+    try {
+      setCloneLoading(true);
+      const res = await clonarAgregados({
+        sourceLocalId: cloneLocal,
+        agregadoId: cloneAll ? null : cloneAgregadoId,
+        clonarTodas: cloneAll
+      });
+      const cantidad = Number(res?.data?.cantidad || 0);
+      setInfo(`Agregados clonados correctamente (${cantidad}).`);
+      setCloneOpen(false);
+      cargar();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudieron clonar los agregados.');
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ mt: 2, px: 1 }}>
       <Paper elevation={0} sx={{ p: 3, backgroundColor: 'transparent', boxShadow: 'none' }}>
@@ -216,6 +276,9 @@ export default function Agregados() {
           </Box>
           {puedeCrearEditar && (
             <Stack direction="row" spacing={1}>
+              {usuario?.rol === 'superadmin' && (
+                <Button variant="outlined" onClick={abrirClonar}>Clonar desde otro local</Button>
+              )}
               <Button variant="outlined" onClick={openCrearGrupo}>Crear grupo</Button>
               <Button variant="contained" onClick={openCrearAgregado}>Crear agregado</Button>
             </Stack>
@@ -387,6 +450,66 @@ export default function Agregados() {
         <DialogActions>
           <Button onClick={() => setAgregadoOpen(false)}>Cancelar</Button>
           <Button variant="contained" onClick={guardarAgregado}>Guardar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Clonar agregados desde otro local</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              select
+              label="Local origen"
+              value={cloneLocal}
+              onChange={(e) => setCloneLocal(e.target.value)}
+            >
+              <MenuItem value="">
+                {locales.length === 0 ? 'No hay locales disponibles' : 'Selecciona un local'}
+              </MenuItem>
+              {locales
+                .filter((local) => local._id !== selectedLocal?._id)
+                .map((local) => (
+                  <MenuItem key={local._id} value={local._id}>
+                    {local.nombre}
+                  </MenuItem>
+                ))}
+            </TextField>
+            <TextField
+              select
+              label="Agregado a clonar"
+              value={cloneAgregadoId}
+              onChange={(e) => setCloneAgregadoId(e.target.value)}
+              disabled={!cloneLocal || cloneAll}
+            >
+              <MenuItem value="">
+                {cloneLocal ? 'Selecciona un agregado' : 'Selecciona un local primero'}
+              </MenuItem>
+              {cloneAgregados.map((agg) => (
+                <MenuItem key={agg._id} value={agg._id}>
+                  {agg.nombre}
+                </MenuItem>
+              ))}
+            </TextField>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={cloneAll}
+                  onChange={(e) => setCloneAll(e.target.checked)}
+                  disabled={!cloneLocal}
+                />
+              }
+              label="Clonar todos los agregados del local"
+            />
+            <Typography variant="caption" color="text.secondary">
+              Se clonan nombre, descripcion, precio y grupo. Las asociaciones por categoria y producto quedan vacias.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloneOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={ejecutarClonado} disabled={cloneLoading}>
+            {cloneLoading ? 'Clonando...' : 'Clonar'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>
