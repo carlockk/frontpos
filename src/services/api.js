@@ -81,7 +81,10 @@ API.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  if (localId && role === 'superadmin') {
+  const hasLocalHeader =
+    config?.headers &&
+    (config.headers['x-local-id'] || config.headers['X-Local-Id']);
+  if (localId && role === 'superadmin' && !hasLocalHeader) {
     config.headers['x-local-id'] = localId;
   }
 
