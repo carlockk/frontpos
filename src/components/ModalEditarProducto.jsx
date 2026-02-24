@@ -19,6 +19,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { editarProducto, obtenerCategorias, obtenerOpcionesAgregados } from '../services/api';
 import VariantesForm from './VariantesForm';
 
+const esObjectId = (value) => typeof value === 'string' && /^[a-fA-F0-9]{24}$/.test(value);
+
+const extraerCategoriaId = (categoria) => {
+  if (!categoria) return '';
+  if (typeof categoria === 'string') return esObjectId(categoria) ? categoria : '';
+  if (typeof categoria === 'object' && categoria._id && esObjectId(String(categoria._id))) {
+    return String(categoria._id);
+  }
+  return '';
+};
+
 export default function ModalEditarProducto({ open, onClose, producto, onActualizado }) {
   const [form, setForm] = useState({
     nombre: '',
@@ -47,7 +58,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
         precio: producto.precio || '',
         descripcion: producto.descripcion || '',
         imagen_url: producto.imagen_url || '',
-        categoria: producto.categoria?._id || producto.categoria || '',
+        categoria: extraerCategoriaId(producto.categoria),
         stock: producto.stock ?? ''
       });
       setUsaVariantes(Array.isArray(producto.variantes) && producto.variantes.length > 0);
@@ -157,7 +168,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
     data.append('nombre', form.nombre.trim());
     data.append('precio', form.precio);
     data.append('descripcion', form.descripcion.trim());
-    data.append('categoria', form.categoria);
+    data.append('categoria', form.categoria || '');
     if (imagenNueva) {
       data.append('imagen', imagenNueva);
     }
