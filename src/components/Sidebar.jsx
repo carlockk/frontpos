@@ -45,6 +45,7 @@ import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LanguageIcon from '@mui/icons-material/Language';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
@@ -173,8 +174,19 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
     >
       {/* Header */}
       <Box sx={{ p: 3 }}>
-  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
     <img src={logo} alt="POS System" style={{ width: '60%', height: '52px', maxWidth: 120 }} />
+    {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && !isMobile && (
+      <Tooltip title="Cambiar logo web cliente">
+        <IconButton
+          size="small"
+          onClick={abrirDialogLogoWeb}
+          sx={{ color: '#93c5fd', border: '1px solid #374151' }}
+        >
+          <EditOutlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    )}
   </Box>
   <Typography sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
     Sistema de punto de venta
@@ -189,17 +201,23 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
       📍 {usuario.local.nombre}
     </Typography>
   )}
-  {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
-    <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'center' }}>
-      <Button
-        size="small"
-        variant="outlined"
-        onClick={abrirDialogLogoWeb}
-        sx={{ color: '#93c5fd', borderColor: '#93c5fd', textTransform: 'none' }}
-      >
-        Cambiar logo web cliente
-      </Button>
-    </Box>
+  {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && isMobile && (
+    <Typography
+      variant="caption"
+      onClick={abrirDialogLogoWeb}
+      sx={{
+        mt: 0.5,
+        color: '#4b5563',
+        fontSize: '10px',
+        lineHeight: 1.2,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: 'pointer'
+      }}
+    >
+      Cambiar logo web cliente
+    </Typography>
   )}
   {usuario?.rol === 'superadmin' && (
     <Box sx={{ mt: 2 }}>
