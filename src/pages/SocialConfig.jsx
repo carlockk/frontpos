@@ -47,6 +47,15 @@ export default function SocialConfig() {
 
   useEffect(() => {
     const cargar = async () => {
+      setLoading(true);
+      setError('');
+      setSocials(buildEmpty());
+
+      if (usuario?.rol === 'superadmin' && !selectedLocal?._id) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await obtenerConfigSocial();
         const data = res?.data || {};
@@ -69,7 +78,7 @@ export default function SocialConfig() {
     };
 
     cargar();
-  }, []);
+  }, [selectedLocal?._id, usuario?.rol]);
 
   useEffect(() => {
     if (usuario?.rol !== 'superadmin') return;
