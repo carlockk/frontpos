@@ -103,7 +103,7 @@ const colorMesa = (mesa) => {
 const tintMesa = (estado) => TINT_BY_STATE[estado] || 'rgba(15,23,42,0.3)';
 
 export default function Restaurante() {
-  const { usuario } = useAuth();
+  const { usuario, selectedLocal } = useAuth();
   const [mesas, setMesas] = useState([]);
   const [comandas, setComandas] = useState([]);
   const [productos, setProductos] = useState([]);
@@ -188,7 +188,7 @@ export default function Restaurante() {
 
   useEffect(() => {
     cargarDatos();
-  }, []);
+  }, [selectedLocal?._id]);
 
   const crearMesa = async () => {
     try {
@@ -472,6 +472,12 @@ export default function Restaurante() {
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
+        </Alert>
+      )}
+
+      {mesas.length === 0 && comandas.length === 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          No hay contenido a mostrar para este local.
         </Alert>
       )}
 
