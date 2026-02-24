@@ -288,6 +288,7 @@ export const guardarConfigRecibo = (data) =>
 // ─────────────────────────────────────────────
 export const obtenerConfigSocial = () => API.get('/social-config');
 export const guardarConfigSocial = (data) => API.put('/social-config', data);
+export const clonarConfigSocial = (data) => API.post('/social-config/clonar', data);
 export const guardarLogoWebCliente = (data) =>
   API.put('/social-config/logo', data, {
     headers: { 'Content-Type': 'multipart/form-data' },

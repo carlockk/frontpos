@@ -3,14 +3,20 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
+  MenuItem,
   Paper,
   Stack,
   Switch,
   TextField,
   Typography
 } from '@mui/material';
-import { guardarConfigSocial, obtenerConfigSocial } from '../services/api';
+import { clonarConfigSocial, guardarConfigSocial, obtenerConfigSocial, obtenerLocales } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const REDES = [
   { key: 'facebook', label: 'Facebook' },
@@ -28,9 +34,14 @@ const buildEmpty = () =>
   }, {});
 
 export default function SocialConfig() {
+  const { usuario, selectedLocal } = useAuth();
   const [socials, setSocials] = useState(buildEmpty());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cloneOpen, setCloneOpen] = useState(false);
+  const [cloneLoading, setCloneLoading] = useState(false);
+  const [locales, setLocales] = useState([]);
+  const [targetLocalIds, setTargetLocalIds] = useState([]);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
 
@@ -59,6 +70,13 @@ export default function SocialConfig() {
 
     cargar();
   }, []);
+
+  useEffect(() => {
+    if (usuario?.rol !== 'superadmin') return;
+    obtenerLocales()
+      .then((res) => setLocales(res.data || []))
+      .catch(() => setLocales([]));
+  }, [usuario?.rol]);
 
   const activos = useMemo(
     () => REDES.filter((red) => socials[red.key]?.enabled && socials[red.key]?.url).length,
@@ -106,6 +124,39 @@ export default function SocialConfig() {
       setError(err?.response?.data?.error || 'No se pudo guardar la configuracion social.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const abrirClonar = () => {
+    setError('');
+    setInfo('');
+    setTargetLocalIds([]);
+    setCloneOpen(true);
+  };
+
+  const ejecutarClonado = async () => {
+    if (!selectedLocal?._id) {
+      setError('Selecciona un local origen para clonar la configuracion.');
+      return;
+    }
+    if (!Array.isArray(targetLocalIds) || targetLocalIds.length === 0) {
+      setError('Selecciona al menos un local destino.');
+      return;
+    }
+
+    try {
+      setCloneLoading(true);
+      const res = await clonarConfigSocial({
+        sourceLocalId: selectedLocal._id,
+        targetLocalIds
+      });
+      const cantidad = Number(res?.data?.cantidad || 0);
+      setInfo(`Configuracion social clonada en ${cantidad} local(es).`);
+      setCloneOpen(false);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo clonar la configuracion social.');
+    } finally {
+      setCloneLoading(false);
     }
   };
 
@@ -166,12 +217,58 @@ export default function SocialConfig() {
             <Typography variant="body2" color="text.secondary">
               Redes activas: {activos}
             </Typography>
-            <Button variant="contained" onClick={guardar} disabled={saving}>
-              {saving ? 'Guardando...' : 'Guardar configuracion'}
-            </Button>
+            <Stack direction="row" spacing={1}>
+              {usuario?.rol === 'superadmin' && (
+                <Button variant="outlined" onClick={abrirClonar}>
+                  Clonar a locales
+                </Button>
+              )}
+              <Button variant="contained" onClick={guardar} disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar configuracion'}
+              </Button>
+            </Stack>
           </Stack>
         </Stack>
       </Paper>
+
+      <Dialog open={cloneOpen} onClose={() => setCloneOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Clonar configuracion social</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Local origen"
+              value={selectedLocal?.nombre || 'Sin seleccionar'}
+              disabled
+              fullWidth
+            />
+            <TextField
+              select
+              SelectProps={{ multiple: true }}
+              label="Locales destino"
+              value={targetLocalIds}
+              onChange={(e) => setTargetLocalIds(e.target.value)}
+              fullWidth
+            >
+              {locales
+                .filter((local) => local._id !== selectedLocal?._id)
+                .map((local) => (
+                  <MenuItem key={local._id} value={local._id}>
+                    {local.nombre}
+                  </MenuItem>
+                ))}
+            </TextField>
+            <Typography variant="caption" color="text.secondary">
+              Se copiaran redes sociales y logo web cliente al/los locales seleccionados.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCloneOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={ejecutarClonado} disabled={cloneLoading}>
+            {cloneLoading ? 'Clonando...' : 'Clonar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
