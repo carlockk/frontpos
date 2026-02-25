@@ -71,6 +71,16 @@ const esPedidoDelivery = (pedido) => {
   );
 };
 
+const getTipoPedidoLabel = (pedido) => {
+  const tipo = String(pedido?.tipo_pedido || '').toLowerCase();
+  if (tipo === 'delivery' || tipo === 'domicilio') return 'delivery';
+  if (tipo === 'retiro') {
+    const hora = String(pedido?.hora_retiro || '').trim();
+    return hora ? `retiro (${hora})` : 'retiro';
+  }
+  return tipo || 'tienda';
+};
+
 export default function PedidosWeb() {
   const { usuario, selectedLocal } = useAuth();
   const location = useLocation();
@@ -498,6 +508,7 @@ export default function PedidosWeb() {
               <TableCell>N° Pedido</TableCell>
               <TableCell>Fecha</TableCell>
               <TableCell>Cliente</TableCell>
+              <TableCell>Tipo</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Estado</TableCell>
               <TableCell>Repartidor</TableCell>
@@ -510,6 +521,7 @@ export default function PedidosWeb() {
                 <TableCell>#{pedido.numero_pedido || pedido._id?.slice(-5)}</TableCell>
                 <TableCell>{new Date(pedido.fecha || pedido.createdAt || Date.now()).toLocaleString()}</TableCell>
                 <TableCell>{getClienteLabel(pedido)}</TableCell>
+                <TableCell>{getTipoPedidoLabel(pedido)}</TableCell>
                 <TableCell>${Number(pedido.total || 0).toLocaleString('es-CL')}</TableCell>
                 <TableCell>
                   <Chip size="small" label={getEstado(pedido)} />
@@ -563,7 +575,7 @@ export default function PedidosWeb() {
             ))}
             {pedidosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   {loading ? 'Cargando pedidos...' : 'Sin pedidos en esta pestana'}
                 </TableCell>
               </TableRow>
@@ -585,7 +597,7 @@ export default function PedidosWeb() {
             <Typography><strong>Fecha:</strong> {new Date(pedidoActivo.fecha || pedidoActivo.createdAt || Date.now()).toLocaleString()}</Typography>
             <Typography><strong>Total:</strong> ${Number(pedidoActivo.total || 0).toLocaleString('es-CL')}</Typography>
             <Typography>
-              <strong>Tipo:</strong> {esPedidoDelivery(pedidoActivo) ? 'delivery' : (pedidoActivo?.tipo_pedido || 'tienda')}
+              <strong>Tipo:</strong> {getTipoPedidoLabel(pedidoActivo)}
             </Typography>
 
             <Box>
