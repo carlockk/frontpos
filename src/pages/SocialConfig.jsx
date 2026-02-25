@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
   MenuItem,
   Paper,
   Stack,
@@ -16,8 +15,6 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { clonarConfigSocial, guardarConfigSocial, obtenerConfigSocial, obtenerLocales } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -30,55 +27,15 @@ const REDES = [
   { key: 'whatsapp', label: 'WhatsApp' }
 ];
 
-const DIAS = [
-  { value: 0, label: 'Domingo' },
-  { value: 1, label: 'Lunes' },
-  { value: 2, label: 'Martes' },
-  { value: 3, label: 'Miercoles' },
-  { value: 4, label: 'Jueves' },
-  { value: 5, label: 'Viernes' },
-  { value: 6, label: 'Sabado' }
-];
-
 const buildEmpty = () =>
   REDES.reduce((acc, red) => {
     acc[red.key] = { enabled: false, url: '' };
     return acc;
   }, {});
 
-const buildEmptySchedule = () =>
-  DIAS.reduce((acc, day) => {
-    acc[day.value] = [];
-    return acc;
-  }, {});
-
-const buildScheduleFromApi = (raw) => {
-  const base = buildEmptySchedule();
-  if (!Array.isArray(raw)) return base;
-  raw.forEach((entry) => {
-    const dia = Number(entry?.dia);
-    if (!Object.prototype.hasOwnProperty.call(base, dia)) return;
-    const tramos = Array.isArray(entry?.tramos) ? entry.tramos : [];
-    base[dia] = tramos
-      .map((slot) => ({
-        inicio: String(slot?.inicio || ''),
-        fin: String(slot?.fin || '')
-      }))
-      .filter((slot) => slot.inicio && slot.fin);
-  });
-  return base;
-};
-
-const buildSchedulePayload = (scheduleByDay) =>
-  DIAS.map((day) => ({
-    dia: day.value,
-    tramos: Array.isArray(scheduleByDay?.[day.value]) ? scheduleByDay[day.value] : []
-  })).filter((entry) => entry.tramos.length > 0);
-
 export default function SocialConfig() {
   const { usuario, selectedLocal } = useAuth();
   const [socials, setSocials] = useState(buildEmpty());
-  const [horariosWeb, setHorariosWeb] = useState(buildEmptySchedule());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cloneOpen, setCloneOpen] = useState(false);
@@ -93,7 +50,6 @@ export default function SocialConfig() {
       setLoading(true);
       setError('');
       setSocials(buildEmpty());
-      setHorariosWeb(buildEmptySchedule());
 
       if (usuario?.rol === 'superadmin' && !selectedLocal?._id) {
         setLoading(false);
@@ -114,7 +70,6 @@ export default function SocialConfig() {
         });
 
         setSocials(next);
-        setHorariosWeb(buildScheduleFromApi(data?.horarios_web));
       } catch (err) {
         setError('No se pudo cargar la configuracion social.');
       } finally {
@@ -162,10 +117,7 @@ export default function SocialConfig() {
     setInfo('');
     setSaving(true);
     try {
-      const res = await guardarConfigSocial({
-        socials,
-        horarios_web: buildSchedulePayload(horariosWeb)
-      });
+      const res = await guardarConfigSocial({ socials });
       const data = res?.data || {};
       const next = buildEmpty();
       REDES.forEach((red) => {
@@ -176,34 +128,12 @@ export default function SocialConfig() {
         };
       });
       setSocials(next);
-      setHorariosWeb(buildScheduleFromApi(data?.horarios_web));
       setInfo('Configuracion social guardada.');
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo guardar la configuracion social.');
     } finally {
       setSaving(false);
     }
-  };
-
-  const agregarTramo = (dia) => {
-    setHorariosWeb((prev) => ({
-      ...prev,
-      [dia]: [...(prev[dia] || []), { inicio: '09:00', fin: '18:00' }]
-    }));
-  };
-
-  const actualizarTramo = (dia, index, key, value) => {
-    setHorariosWeb((prev) => ({
-      ...prev,
-      [dia]: (prev[dia] || []).map((slot, idx) => (idx === index ? { ...slot, [key]: value } : slot))
-    }));
-  };
-
-  const eliminarTramo = (dia, index) => {
-    setHorariosWeb((prev) => ({
-      ...prev,
-      [dia]: (prev[dia] || []).filter((_, idx) => idx !== index)
-    }));
   };
 
   const abrirClonar = () => {
@@ -291,70 +221,6 @@ export default function SocialConfig() {
               </Paper>
             );
           })}
-
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Horarios atencion web (pedidos en linea)
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Fuera de estos horarios, el cliente no podra avanzar al pago.
-            </Typography>
-
-            <Stack spacing={2}>
-              {DIAS.map((day) => {
-                const slots = horariosWeb?.[day.value] || [];
-                return (
-                  <Paper key={day.value} variant="outlined" sx={{ p: 1.5 }}>
-                    <Stack spacing={1}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
-                        <Typography variant="body2" fontWeight={600}>
-                          {day.label}
-                        </Typography>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<AddCircleOutlineIcon />}
-                          onClick={() => agregarTramo(day.value)}
-                        >
-                          Agregar tramo
-                        </Button>
-                      </Stack>
-
-                      {slots.length === 0 ? (
-                        <Typography variant="caption" color="text.secondary">
-                          Sin atencion configurada para este dia.
-                        </Typography>
-                      ) : (
-                        slots.map((slot, idx) => (
-                          <Stack key={`${day.value}-${idx}`} direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems="center">
-                            <TextField
-                              size="small"
-                              type="time"
-                              label="Inicio"
-                              value={slot.inicio}
-                              onChange={(e) => actualizarTramo(day.value, idx, 'inicio', e.target.value)}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                            <TextField
-                              size="small"
-                              type="time"
-                              label="Fin"
-                              value={slot.fin}
-                              onChange={(e) => actualizarTramo(day.value, idx, 'fin', e.target.value)}
-                              InputLabelProps={{ shrink: true }}
-                            />
-                            <IconButton color="error" onClick={() => eliminarTramo(day.value, idx)}>
-                              <DeleteOutlineIcon />
-                            </IconButton>
-                          </Stack>
-                        ))
-                      )}
-                    </Stack>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          </Paper>
 
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Typography variant="body2" color="text.secondary">

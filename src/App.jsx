@@ -31,6 +31,7 @@ import ConfigRecibo from './pages/ConfigRecibo';
 import Agregados from './pages/Agregados';
 import PedidosWeb from './pages/PedidosWeb';
 import SocialConfig from './pages/SocialConfig';
+import HorarioTienda from './pages/HorarioTienda';
 import Restaurante from './pages/Restaurante';
 import CheckoutResult from './pages/CheckoutResult';
 import { LOCAL_REQUIRED_EVENT } from './services/api';
@@ -144,6 +145,10 @@ export default function App() {
             <Route
               path="/social"
               element={esAdmin ? <SocialConfig /> : <Navigate to={rutaInicio} />}
+            />
+            <Route
+              path="/horario-tienda"
+              element={esAdmin ? <HorarioTienda /> : <Navigate to={rutaInicio} />}
             />
             <Route
               path="/config-recibo"

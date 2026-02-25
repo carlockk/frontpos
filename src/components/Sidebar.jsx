@@ -44,6 +44,7 @@ import StorefrontIcon from '@mui/icons-material/StorefrontOutlined';
 import PeopleAltIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LanguageIcon from '@mui/icons-material/Language';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -367,6 +368,14 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
             <ListItemButton component={Link} to="/social" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
               <Box sx={{ mr: 2 }}><LanguageIcon /></Box>
               <ListItemText primary="Social" />
+            </ListItemButton>
+          </ListItem>
+        )}
+        {(usuario?.rol === 'admin' || usuario?.rol === 'superadmin') && (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/horario-tienda" sx={{ px: 3, py: 1.5, color: '#d1d5db' }}>
+              <Box sx={{ mr: 2 }}><AccessTimeIcon /></Box>
+              <ListItemText primary="Horario de la tienda" />
             </ListItemButton>
           </ListItem>
         )}
