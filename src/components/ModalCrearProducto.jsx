@@ -29,7 +29,8 @@ export default function ModalCrearProducto({
     precio: '',
     descripcion: '',
     categoria: '',
-    stock: ''
+    stock: '',
+    imagen_url: ''
   });
   const [imagen, setImagen] = useState(null);
   const [categorias, setCategorias] = useState([]);
@@ -52,7 +53,8 @@ export default function ModalCrearProducto({
       precio: '',
       descripcion: '',
       categoria: '',
-      stock: ''
+      stock: '',
+      imagen_url: ''
     });
     setImagen(null);
     setVariantes([]);
@@ -66,8 +68,13 @@ export default function ModalCrearProducto({
       return;
     }
 
-    if (!imagen) {
-      setError('Debes seleccionar una imagen.');
+    if (!imagen && !form.imagen_url?.trim()) {
+      setError('Debes cargar una imagen desde dispositivo o URL.');
+      return;
+    }
+
+    if (form.imagen_url?.trim() && !/^https?:\/\/\S+$/i.test(form.imagen_url.trim())) {
+      setError('La URL de imagen debe comenzar con http:// o https://');
       return;
     }
 
@@ -91,7 +98,8 @@ export default function ModalCrearProducto({
     data.append('precio', form.precio);
     data.append('descripcion', form.descripcion.trim());
     data.append('categoria', form.categoria);
-    data.append('imagen', imagen);
+    data.append('imagen_url', form.imagen_url?.trim() || '');
+    if (imagen) data.append('imagen', imagen);
 
     if (usaVariantes) {
       data.append('stock', '');
@@ -199,7 +207,15 @@ export default function ModalCrearProducto({
             hidden
             accept="image/*"
             type="file"
-            onChange={(e) => setImagen(e.target.files[0])}
+            onChange={(e) => {
+              const archivo = e.target.files?.[0] || null;
+              if (archivo && !archivo.type.startsWith('image/')) {
+                setError('Solo se permiten archivos de imagen');
+                return;
+              }
+              setImagen(archivo);
+              setError('');
+            }}
           />
         </Button>
 
@@ -208,6 +224,16 @@ export default function ModalCrearProducto({
             Imagen: {imagen.name}
           </Typography>
         )}
+
+        <TextField
+          label="URL de imagen (opcional)"
+          name="imagen_url"
+          fullWidth
+          sx={{ mb: 2 }}
+          value={form.imagen_url}
+          onChange={handleChange}
+          placeholder="https://..."
+        />
 
         {usaVariantes && (
           <Box sx={{ mt: 1 }}>

@@ -24,7 +24,8 @@ export default function ProductoForm({ onSuccess, onCancel }) {
     precio: '',
     descripcion: '',
     categoria: '',
-    stock: ''
+    stock: '',
+    imagen_url: ''
   });
   const [imagen, setImagen] = useState(null);
   const [categorias, setCategorias] = useState([]);
@@ -58,7 +59,8 @@ export default function ProductoForm({ onSuccess, onCancel }) {
       precio: '',
       descripcion: '',
       categoria: '',
-      stock: ''
+      stock: '',
+      imagen_url: ''
     });
     setImagen(null);
     setVariantes([]);
@@ -111,7 +113,13 @@ export default function ProductoForm({ onSuccess, onCancel }) {
   };
 
   const handleImageChange = (event) => {
-    setImagen(event.target.files[0]);
+    const archivo = event.target.files?.[0] || null;
+    if (archivo && !archivo.type.startsWith('image/')) {
+      setError('Solo se permiten archivos de imagen.');
+      return;
+    }
+    setImagen(archivo);
+    setError('');
   };
 
   const handleSubmit = async (event) => {
@@ -120,8 +128,18 @@ export default function ProductoForm({ onSuccess, onCancel }) {
     setExito('');
     setCargando(true);
 
-    if (!form.nombre || !form.precio || !imagen) {
-      setError('Nombre, precio e imagen son obligatorios.');
+    if (!form.nombre || !form.precio) {
+      setError('Nombre y precio son obligatorios.');
+      setCargando(false);
+      return;
+    }
+    if (!imagen && !form.imagen_url?.trim()) {
+      setError('Debes cargar una imagen desde dispositivo o URL.');
+      setCargando(false);
+      return;
+    }
+    if (form.imagen_url?.trim() && !/^https?:\/\/\S+$/i.test(form.imagen_url.trim())) {
+      setError('La URL de imagen debe comenzar con http:// o https://');
       setCargando(false);
       return;
     }
@@ -147,7 +165,8 @@ export default function ProductoForm({ onSuccess, onCancel }) {
     data.append('precio', form.precio);
     data.append('descripcion', form.descripcion);
     data.append('categoria', form.categoria);
-    data.append('imagen', imagen);
+    data.append('imagen_url', form.imagen_url?.trim() || '');
+    if (imagen) data.append('imagen', imagen);
     data.append('controlarStock', controlarStock);
 
     if (controlarStock && usaVariantes) {
@@ -324,6 +343,15 @@ export default function ProductoForm({ onSuccess, onCancel }) {
             </Typography>
           )}
         </Box>
+
+        <TextField
+          label="URL de imagen (opcional)"
+          name="imagen_url"
+          value={form.imagen_url}
+          onChange={handleChange}
+          fullWidth
+          placeholder="https://..."
+        />
 
         {usaVariantes && (
           <Box>

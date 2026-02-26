@@ -152,6 +152,11 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
       return;
     }
 
+    if (form.imagen_url && !/^https?:\/\/\S+$/i.test(form.imagen_url.trim())) {
+      setError('La URL de imagen debe comenzar con http:// o https://');
+      return;
+    }
+
     if (!usaVariantes && form.stock !== '' && parseInt(form.stock, 10) < 0) {
       setError('El stock no puede ser negativo');
       return;
@@ -168,6 +173,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
     data.append('nombre', form.nombre.trim());
     data.append('precio', form.precio);
     data.append('descripcion', form.descripcion.trim());
+    data.append('imagen_url', form.imagen_url?.trim() || '');
     data.append('categoria', form.categoria || '');
     if (imagenNueva) {
       data.append('imagen', imagenNueva);
@@ -348,6 +354,16 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
             Nueva imagen: {imagenNueva.name}
           </Typography>
         )}
+
+        <TextField
+          fullWidth
+          label="URL de imagen (opcional)"
+          name="imagen_url"
+          value={form.imagen_url}
+          onChange={handleChange}
+          placeholder="https://..."
+          sx={{ mt: 2 }}
+        />
       </DialogContent>
 
       <DialogActions>
