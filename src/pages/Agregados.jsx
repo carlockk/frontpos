@@ -80,6 +80,7 @@ export default function Agregados() {
   const [cloneAgregadoId, setCloneAgregadoId] = useState('');
   const [cloneAll, setCloneAll] = useState(false);
   const [cloneLoading, setCloneLoading] = useState(false);
+  const [categoriaActiva, setCategoriaActiva] = useState('');
 
   const productosOptions = useMemo(
     () =>
@@ -89,6 +90,36 @@ export default function Agregados() {
       })),
     [productos]
   );
+
+  const agregadosByGrupo = useMemo(() => {
+    const map = new Map();
+    (agregados || []).forEach((agg) => {
+      const groupId = String(agg?.grupo?._id || '');
+      if (!groupId) return;
+      if (!map.has(groupId)) map.set(groupId, []);
+      map.get(groupId).push(agg);
+    });
+    return map;
+  }, [agregados]);
+
+  const categoriasAgrupadas = useMemo(() => {
+    const map = new Map();
+    (grupos || []).forEach((grupo) => {
+      const nombre = String(grupo?.categoriaPrincipal || '').trim() || 'Sin categoria principal';
+      if (!map.has(nombre)) {
+        map.set(nombre, { nombre, grupos: [], totalOpciones: 0 });
+      }
+      const bucket = map.get(nombre);
+      bucket.grupos.push(grupo);
+      bucket.totalOpciones += (agregadosByGrupo.get(String(grupo._id)) || []).length;
+    });
+    return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  }, [grupos, agregadosByGrupo]);
+
+  const gruposCategoriaActiva = useMemo(() => {
+    const match = categoriasAgrupadas.find((c) => c.nombre === categoriaActiva);
+    return match?.grupos || [];
+  }, [categoriasAgrupadas, categoriaActiva]);
 
   const cargar = async () => {
     setError('');
@@ -129,9 +160,24 @@ export default function Agregados() {
       .catch(() => setCloneAgregados([]));
   }, [cloneLocal]);
 
+  useEffect(() => {
+    if (categoriasAgrupadas.length === 0) {
+      setCategoriaActiva('');
+      return;
+    }
+    const existeActiva = categoriasAgrupadas.some((c) => c.nombre === categoriaActiva);
+    if (!categoriaActiva || !existeActiva) {
+      setCategoriaActiva(categoriasAgrupadas[0].nombre);
+    }
+  }, [categoriasAgrupadas, categoriaActiva]);
+
   const openCrearGrupo = () => {
     setGrupoEditId('');
-    setGrupoForm(emptyGrupo);
+    setGrupoForm({
+      ...emptyGrupo,
+      categoriaPrincipal:
+        categoriaActiva && categoriaActiva !== 'Sin categoria principal' ? categoriaActiva : ''
+    });
     setGrupoOpen(true);
   };
 
@@ -298,27 +344,70 @@ export default function Agregados() {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {info && <Alert severity="success" sx={{ mb: 2 }}>{info}</Alert>}
 
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>Grupos</Typography>
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>Categorias de agregados</Typography>
         <Table size="small" sx={{ mb: 3 }}>
           <TableHead>
             <TableRow>
+              <TableCell>Titulo categoria</TableCell>
+              <TableCell>Titulos de agregado</TableCell>
+              <TableCell>Opciones</TableCell>
+              <TableCell align="right">Abrir</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {categoriasAgrupadas.length === 0 ? (
+              <TableRow><TableCell colSpan={4} align="center">Sin categorias de agregados</TableCell></TableRow>
+            ) : (
+              categoriasAgrupadas.map((categoria) => (
+                <TableRow key={categoria.nombre} selected={categoria.nombre === categoriaActiva}>
+                  <TableCell>{categoria.nombre}</TableCell>
+                  <TableCell>{categoria.grupos.length}</TableCell>
+                  <TableCell>{categoria.totalOpciones}</TableCell>
+                  <TableCell align="right">
+                    <Button size="small" onClick={() => setCategoriaActiva(categoria.nombre)}>
+                      Ver titulos
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mb: 1 }}>
+          <Typography variant="subtitle1">
+            Titulos de agregado {categoriaActiva ? `- ${categoriaActiva}` : ''}
+          </Typography>
+          {puedeCrearEditar && (
+            <Button variant="outlined" size="small" onClick={openCrearGrupo}>
+              Crear titulo de agregado
+            </Button>
+          )}
+        </Stack>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
               <TableCell>Titulo</TableCell>
-              <TableCell>Categoria principal</TableCell>
-              <TableCell>Descripcion</TableCell>
               <TableCell>Tipo seleccion</TableCell>
+              <TableCell>Descripcion</TableCell>
+              <TableCell>Opciones dentro del titulo</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {grupos.length === 0 ? (
-              <TableRow><TableCell colSpan={5} align="center">Sin grupos</TableCell></TableRow>
+            {gruposCategoriaActiva.length === 0 ? (
+              <TableRow><TableCell colSpan={5} align="center">Sin titulos de agregado en esta categoria</TableCell></TableRow>
             ) : (
-              grupos.map((grupo) => (
+              gruposCategoriaActiva.map((grupo) => (
                 <TableRow key={grupo._id}>
                   <TableCell>{grupo.titulo}</TableCell>
-                  <TableCell>{grupo.categoriaPrincipal || '-'}</TableCell>
-                  <TableCell>{grupo.descripcion || '-'}</TableCell>
                   <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
+                  <TableCell>{grupo.descripcion || '-'}</TableCell>
+                  <TableCell>
+                    {(agregadosByGrupo.get(String(grupo._id)) || [])
+                      .map((agg) => agg.nombre)
+                      .join(', ') || '-'}
+                  </TableCell>
                   <TableCell align="right">
                     {puedeCrearEditar && (
                       <IconButton size="small" onClick={() => openEditarGrupo(grupo)}>
@@ -337,21 +426,30 @@ export default function Agregados() {
           </TableBody>
         </Table>
 
-        <Typography variant="subtitle1" sx={{ mb: 1 }}>Agregados</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mt: 3, mb: 1 }}>
+          <Typography variant="subtitle1">
+            Opciones (agregados)
+          </Typography>
+          {puedeCrearEditar && (
+            <Button variant="contained" size="small" onClick={openCrearAgregado}>
+              Crear opcion
+            </Button>
+          )}
+        </Stack>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Grupo</TableCell>
+              <TableCell>Opcion</TableCell>
+              <TableCell>Titulo</TableCell>
               <TableCell>Precio</TableCell>
-              <TableCell>Categorias</TableCell>
-              <TableCell>Productos</TableCell>
+              <TableCell>Categorias asociadas</TableCell>
+              <TableCell>Productos asociados</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {agregados.length === 0 ? (
-              <TableRow><TableCell colSpan={6} align="center">Sin agregados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center">Sin opciones</TableCell></TableRow>
             ) : (
               agregados.map((agregado) => (
                 <TableRow key={agregado._id}>
