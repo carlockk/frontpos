@@ -108,6 +108,9 @@ export default function Agregados() {
   const [cloneAll, setCloneAll] = useState(false);
   const [cloneLoading, setCloneLoading] = useState(false);
   const [categoriaActiva, setCategoriaActiva] = useState('');
+  const [categoriaEditOpen, setCategoriaEditOpen] = useState(false);
+  const [categoriaEditData, setCategoriaEditData] = useState(null);
+  const [categoriaEditNombre, setCategoriaEditNombre] = useState('');
 
   const productosOptions = useMemo(
     () =>
@@ -132,6 +135,12 @@ export default function Agregados() {
     if (!actual) return false;
     return !categoriaPrincipalOptions.includes(actual);
   }, [grupoForm.categoriaPrincipal, categoriaPrincipalOptions]);
+
+  const hasLegacyCategoriaEdit = useMemo(() => {
+    const actual = String(categoriaEditNombre || '').trim();
+    if (!actual) return false;
+    return !categoriaPrincipalOptions.includes(actual);
+  }, [categoriaEditNombre, categoriaPrincipalOptions]);
 
   const agregadosByGrupo = useMemo(() => {
     const map = new Map();
@@ -162,6 +171,14 @@ export default function Agregados() {
     const match = categoriasAgrupadas.find((c) => c.nombre === categoriaActiva);
     return match?.grupos || [];
   }, [categoriasAgrupadas, categoriaActiva]);
+
+  const categoriaEditOpcionesCount = useMemo(() => {
+    if (!categoriaEditData?.grupos) return 0;
+    return categoriaEditData.grupos.reduce(
+      (acc, grupo) => acc + (agregadosByGrupo.get(String(grupo._id)) || []).length,
+      0
+    );
+  }, [categoriaEditData, agregadosByGrupo]);
 
   const cargar = async () => {
     setError('');
@@ -268,19 +285,20 @@ export default function Agregados() {
     }
   };
 
-  const editarCategoriaAgregados = async (categoria) => {
+  const abrirEditarCategoriaAgregados = (categoria) => {
     if (!puedeCrearEditar) return;
     const actual = categoria?.nombre === 'Sin categoria principal' ? '' : String(categoria?.nombre || '');
-    const nuevo = window.prompt(
-      'Nuevo nombre para la categoria de agregados (deja vacio para "Sin categoria principal"):',
-      actual
-    );
-    if (nuevo === null) return;
+    setCategoriaEditData(categoria || null);
+    setCategoriaEditNombre(actual);
+    setCategoriaEditOpen(true);
+  };
 
-    const categoriaPrincipal = String(nuevo || '').trim();
+  const guardarEdicionCategoriaAgregados = async () => {
+    if (!categoriaEditData) return;
+    const categoriaPrincipal = String(categoriaEditNombre || '').trim();
     try {
       await Promise.all(
-        (categoria?.grupos || []).map((grupo) =>
+        (categoriaEditData?.grupos || []).map((grupo) =>
           editarGrupoAgregados(grupo._id, {
             categoriaPrincipal,
             titulo: grupo.titulo || '',
@@ -290,6 +308,9 @@ export default function Agregados() {
         )
       );
       setInfo('Categoria de agregados actualizada.');
+      setCategoriaEditOpen(false);
+      setCategoriaEditData(null);
+      setCategoriaEditNombre('');
       cargar();
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo editar la categoria de agregados.');
@@ -467,7 +488,7 @@ export default function Agregados() {
                   </TableCell>
                   <TableCell align="right">
                     {puedeCrearEditar && (
-                      <IconButton size="small" onClick={() => editarCategoriaAgregados(categoria)}>
+                      <IconButton size="small" onClick={() => abrirEditarCategoriaAgregados(categoria)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                     )}
@@ -590,6 +611,80 @@ export default function Agregados() {
           </TableBody>
         </Table>
       </Paper>
+
+      <Dialog open={categoriaEditOpen} onClose={() => setCategoriaEditOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>Editar categoria de agregados</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              select
+              label="Categoria principal"
+              value={categoriaEditNombre}
+              onChange={(e) => setCategoriaEditNombre(e.target.value)}
+              helperText="Este cambio se aplicara a todos los titulos dentro de esta categoria"
+            >
+              <MenuItem value="">Sin categoria principal</MenuItem>
+              {categoriaPrincipalOptions.map((catNombre) => (
+                <MenuItem key={`categoria-edit-${catNombre}`} value={catNombre}>
+                  {catNombre}
+                </MenuItem>
+              ))}
+              {hasLegacyCategoriaEdit && (
+                <MenuItem value={categoriaEditNombre}>
+                  {categoriaEditNombre} (actual)
+                </MenuItem>
+              )}
+            </TextField>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                Titulos: {categoriaEditData?.grupos?.length || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Opciones: {categoriaEditOpcionesCount}
+              </Typography>
+            </Stack>
+
+            <Typography variant="subtitle2">Datos actuales de la categoria</Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Titulo</TableCell>
+                  <TableCell>Tipo seleccion</TableCell>
+                  <TableCell>Descripcion</TableCell>
+                  <TableCell>Opciones</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {!categoriaEditData?.grupos || categoriaEditData.grupos.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">Sin titulos en esta categoria</TableCell>
+                  </TableRow>
+                ) : (
+                  categoriaEditData.grupos.map((grupo) => (
+                    <TableRow key={`categoria-edit-grupo-${grupo._id}`}>
+                      <TableCell>{grupo.titulo || '-'}</TableCell>
+                      <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
+                      <TableCell>{grupo.descripcion || '-'}</TableCell>
+                      <TableCell>
+                        {(agregadosByGrupo.get(String(grupo._id)) || [])
+                          .map((agg) => agg.nombre)
+                          .join(', ') || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoriaEditOpen(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={guardarEdicionCategoriaAgregados}>
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={grupoOpen} onClose={() => setGrupoOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{grupoEditId ? 'Editar grupo' : 'Crear grupo'}</DialogTitle>
