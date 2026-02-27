@@ -54,6 +54,33 @@ const emptyAgregado = {
   productos: []
 };
 
+const buildCategoryLabelMap = (items = []) => {
+  const byId = new Map((items || []).map((cat) => [String(cat._id), cat]));
+  const cache = new Map();
+
+  const buildLabel = (cat, stack = new Set()) => {
+    if (!cat || !cat._id) return '';
+    const id = String(cat._id);
+    if (cache.has(id)) return cache.get(id);
+    if (stack.has(id)) return String(cat.nombre || '');
+
+    stack.add(id);
+    const parentId = cat.parent ? String(cat.parent) : '';
+    const parent = parentId ? byId.get(parentId) : null;
+    const label = parent
+      ? `${buildLabel(parent, stack)} / ${String(cat.nombre || '')}`
+      : String(cat.nombre || '');
+
+    cache.set(id, label);
+    return label;
+  };
+
+  return (items || []).map((cat) => ({
+    ...cat,
+    label: buildLabel(cat)
+  }));
+};
+
 export default function Agregados() {
   const { usuario, selectedLocal } = useAuth();
   const puedeCrearEditar = ['admin', 'superadmin', 'cajero'].includes(usuario?.rol);
@@ -90,6 +117,21 @@ export default function Agregados() {
       })),
     [productos]
   );
+
+  const categoriaPrincipalOptions = useMemo(
+    () =>
+      buildCategoryLabelMap(categorias || [])
+        .map((cat) => String(cat.label || cat.nombre || '').trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, 'es')),
+    [categorias]
+  );
+
+  const hasLegacyCategoriaPrincipal = useMemo(() => {
+    const actual = String(grupoForm.categoriaPrincipal || '').trim();
+    if (!actual) return false;
+    return !categoriaPrincipalOptions.includes(actual);
+  }, [grupoForm.categoriaPrincipal, categoriaPrincipalOptions]);
 
   const agregadosByGrupo = useMemo(() => {
     const map = new Map();
@@ -487,12 +529,24 @@ export default function Agregados() {
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
-              label="Categoria principal (ej: Waffles singles)"
+              select
+              label="Categoria principal"
               value={grupoForm.categoriaPrincipal}
               onChange={(e) =>
                 setGrupoForm((prev) => ({ ...prev, categoriaPrincipal: e.target.value }))
               }
-            />
+              helperText="Selecciona la categoria de productos donde aplica este titulo"
+            >
+              <MenuItem value="">Sin categoria principal</MenuItem>
+              {categoriaPrincipalOptions.map((catNombre) => (
+                <MenuItem key={catNombre} value={catNombre}>{catNombre}</MenuItem>
+              ))}
+              {hasLegacyCategoriaPrincipal && (
+                <MenuItem value={grupoForm.categoriaPrincipal}>
+                  {grupoForm.categoriaPrincipal} (actual)
+                </MenuItem>
+              )}
+            </TextField>
             <TextField
               label="Titulo"
               value={grupoForm.titulo}
@@ -643,3 +697,4 @@ export default function Agregados() {
     </Box>
   );
 }
+
