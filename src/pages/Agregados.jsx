@@ -39,7 +39,12 @@ import {
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const emptyGrupo = { titulo: '', descripcion: '', modoSeleccion: 'multiple' };
+const emptyGrupo = {
+  categoriaPrincipal: '',
+  titulo: '',
+  descripcion: '',
+  modoSeleccion: 'multiple'
+};
 const emptyAgregado = {
   nombre: '',
   descripcion: '',
@@ -133,6 +138,7 @@ export default function Agregados() {
   const openEditarGrupo = (grupo) => {
     setGrupoEditId(grupo._id);
     setGrupoForm({
+      categoriaPrincipal: grupo.categoriaPrincipal || '',
       titulo: grupo.titulo || '',
       descripcion: grupo.descripcion || '',
       modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple'
@@ -297,6 +303,7 @@ export default function Agregados() {
           <TableHead>
             <TableRow>
               <TableCell>Titulo</TableCell>
+              <TableCell>Categoria principal</TableCell>
               <TableCell>Descripcion</TableCell>
               <TableCell>Tipo seleccion</TableCell>
               <TableCell align="right">Acciones</TableCell>
@@ -304,11 +311,12 @@ export default function Agregados() {
           </TableHead>
           <TableBody>
             {grupos.length === 0 ? (
-              <TableRow><TableCell colSpan={4} align="center">Sin grupos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} align="center">Sin grupos</TableCell></TableRow>
             ) : (
               grupos.map((grupo) => (
                 <TableRow key={grupo._id}>
                   <TableCell>{grupo.titulo}</TableCell>
+                  <TableCell>{grupo.categoriaPrincipal || '-'}</TableCell>
                   <TableCell>{grupo.descripcion || '-'}</TableCell>
                   <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
                   <TableCell align="right">
@@ -380,6 +388,13 @@ export default function Agregados() {
         <DialogTitle>{grupoEditId ? 'Editar grupo' : 'Crear grupo'}</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Categoria principal (ej: Waffles singles)"
+              value={grupoForm.categoriaPrincipal}
+              onChange={(e) =>
+                setGrupoForm((prev) => ({ ...prev, categoriaPrincipal: e.target.value }))
+              }
+            />
             <TextField
               label="Titulo"
               value={grupoForm.titulo}

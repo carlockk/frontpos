@@ -43,6 +43,7 @@ export default function SelectorAgregadosDialog({
       if (!byKey.has(key)) {
         byKey.set(key, {
           key,
+          categoriaPrincipal: grupo?.categoriaPrincipal || '',
           titulo: grupo?.titulo || 'Otros agregados',
           modoSeleccion: grupo?.modoSeleccion === 'unico' ? 'unico' : 'multiple',
           items: []
@@ -53,6 +54,25 @@ export default function SelectorAgregadosDialog({
 
     return Array.from(byKey.values());
   }, [agregadosDisponibles]);
+
+  const categoriasPrincipales = useMemo(() => {
+    const byKey = new Map();
+    gruposConfigurados.forEach((grupo) => {
+      const key = String(grupo.categoriaPrincipal || '__sin_categoria_principal__');
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          key,
+          titulo:
+            grupo.categoriaPrincipal && String(grupo.categoriaPrincipal).trim()
+              ? String(grupo.categoriaPrincipal).trim()
+              : 'Agregados',
+          grupos: []
+        });
+      }
+      byKey.get(key).grupos.push(grupo);
+    });
+    return Array.from(byKey.values());
+  }, [gruposConfigurados]);
 
   const metaByAgregadoId = useMemo(() => {
     const map = new Map();
@@ -128,90 +148,99 @@ export default function SelectorAgregadosDialog({
           <Typography color="text.secondary">Este producto no tiene agregados configurados.</Typography>
         ) : (
           <Stack spacing={2}>
-            {gruposConfigurados.map((grupo) => (
-              <Box key={grupo.key}>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  {grupo.titulo} {grupo.modoSeleccion === 'unico' ? '(elige uno)' : '(elige uno o varios)'}
+            {categoriasPrincipales.map((categoria) => (
+              <Box key={categoria.key}>
+                <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 700 }}>
+                  {categoria.titulo}
                 </Typography>
-                {grupo.modoSeleccion === 'unico' ? (
-                  <RadioGroup
-                    value={String(getSeleccionadoRadio(grupo.key))}
-                    onChange={(event) => {
-                      const elegido = grupo.items.find(
-                        (agg) => String(agg._id || agg.agregadoId || '') === String(event.target.value)
-                      );
-                      if (elegido) {
-                        seleccionarUnico(grupo.key, elegido);
-                      }
-                    }}
-                  >
-                    <Stack spacing={1.25}>
-                      {grupo.items.map((agg) => (
-                        <Box
-                          key={agg._id || agg.agregadoId || agg.nombre}
-                          sx={{
-                            px: 1.25,
-                            py: 0.75,
-                            borderRadius: 1.5,
-                            border: '1px solid',
-                            borderColor: 'divider'
+                <Stack spacing={2}>
+                  {categoria.grupos.map((grupo) => (
+                    <Box key={grupo.key}>
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        {grupo.titulo} {grupo.modoSeleccion === 'unico' ? '(elige uno)' : '(elige uno o varios)'}
+                      </Typography>
+                      {grupo.modoSeleccion === 'unico' ? (
+                        <RadioGroup
+                          value={String(getSeleccionadoRadio(grupo.key))}
+                          onChange={(event) => {
+                            const elegido = grupo.items.find(
+                              (agg) => String(agg._id || agg.agregadoId || '') === String(event.target.value)
+                            );
+                            if (elegido) {
+                              seleccionarUnico(grupo.key, elegido);
+                            }
                           }}
                         >
-                          <FormControlLabel
-                            sx={{ width: '100%', m: 0 }}
-                            value={String(agg._id || agg.agregadoId || '')}
-                            control={<Radio />}
-                            label={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
-                                <Typography>{agg.nombre}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {formatearPrecio(agg.precio)}
-                                </Typography>
+                          <Stack spacing={1.25}>
+                            {grupo.items.map((agg) => (
+                              <Box
+                                key={agg._id || agg.agregadoId || agg.nombre}
+                                sx={{
+                                  px: 1.25,
+                                  py: 0.75,
+                                  borderRadius: 1.5,
+                                  border: '1px solid',
+                                  borderColor: 'divider'
+                                }}
+                              >
+                                <FormControlLabel
+                                  sx={{ width: '100%', m: 0 }}
+                                  value={String(agg._id || agg.agregadoId || '')}
+                                  control={<Radio />}
+                                  label={
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                                      <Typography>{agg.nombre}</Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {formatearPrecio(agg.precio)}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                />
                               </Box>
-                            }
-                          />
-                        </Box>
-                      ))}
-                    </Stack>
-                  </RadioGroup>
-                ) : (
-                  <Stack spacing={1.25}>
-                    {grupo.items.map((agg) => {
-                      const seleccionado = seleccionados.some(
-                        (item) =>
-                          String(item.agregadoId || item._id || '') ===
-                          String(agg._id || agg.agregadoId || '')
-                      );
-                      return (
-                        <Box
-                          key={agg._id || agg.agregadoId || agg.nombre}
-                          sx={{
-                            px: 1.25,
-                            py: 0.75,
-                            borderRadius: 1.5,
-                            border: '1px solid',
-                            borderColor: 'divider'
-                          }}
-                        >
-                          <FormControlLabel
-                            sx={{ width: '100%', m: 0 }}
-                            control={
-                              <Checkbox checked={seleccionado} onChange={() => toggleAgregado(agg)} />
-                            }
-                            label={
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
-                                <Typography>{agg.nombre}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {formatearPrecio(agg.precio)}
-                                </Typography>
+                            ))}
+                          </Stack>
+                        </RadioGroup>
+                      ) : (
+                        <Stack spacing={1.25}>
+                          {grupo.items.map((agg) => {
+                            const seleccionado = seleccionados.some(
+                              (item) =>
+                                String(item.agregadoId || item._id || '') ===
+                                String(agg._id || agg.agregadoId || '')
+                            );
+                            return (
+                              <Box
+                                key={agg._id || agg.agregadoId || agg.nombre}
+                                sx={{
+                                  px: 1.25,
+                                  py: 0.75,
+                                  borderRadius: 1.5,
+                                  border: '1px solid',
+                                  borderColor: 'divider'
+                                }}
+                              >
+                                <FormControlLabel
+                                  sx={{ width: '100%', m: 0 }}
+                                  control={
+                                    <Checkbox checked={seleccionado} onChange={() => toggleAgregado(agg)} />
+                                  }
+                                  label={
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                                      <Typography>{agg.nombre}</Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {formatearPrecio(agg.precio)}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                />
                               </Box>
-                            }
-                          />
-                        </Box>
-                      );
-                    })}
-                  </Stack>
-                )}
+                            );
+                          })}
+                        </Stack>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
               </Box>
             ))}
           </Stack>

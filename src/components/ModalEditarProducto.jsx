@@ -295,7 +295,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
           >
             {gruposAgregados.map((grupo) => (
               <MenuItem key={grupo._id} value={grupo._id}>
-                {grupo.titulo}
+                {grupo.categoriaPrincipal ? `${grupo.categoriaPrincipal} / ` : ''}{grupo.titulo}
               </MenuItem>
             ))}
           </Select>
