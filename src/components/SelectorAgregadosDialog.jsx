@@ -8,6 +8,8 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  Radio,
+  RadioGroup,
   Stack,
   Typography
 } from '@mui/material';
@@ -29,6 +31,41 @@ export default function SelectorAgregadosDialog({
     () => (Array.isArray(producto?.agregados) ? producto.agregados.filter((agg) => agg?.nombre) : []),
     [producto]
   );
+  const gruposConfigurados = useMemo(() => {
+    const byKey = new Map();
+
+    agregadosDisponibles.forEach((agg) => {
+      const agregadoId = String(agg._id || agg.agregadoId || '');
+      if (!agregadoId) return;
+
+      const grupo = agg?.grupo && typeof agg.grupo === 'object' ? agg.grupo : null;
+      const key = grupo?._id ? String(grupo._id) : '__sin_grupo__';
+      if (!byKey.has(key)) {
+        byKey.set(key, {
+          key,
+          titulo: grupo?.titulo || 'Otros agregados',
+          modoSeleccion: grupo?.modoSeleccion === 'unico' ? 'unico' : 'multiple',
+          items: []
+        });
+      }
+      byKey.get(key).items.push(agg);
+    });
+
+    return Array.from(byKey.values());
+  }, [agregadosDisponibles]);
+
+  const metaByAgregadoId = useMemo(() => {
+    const map = new Map();
+    gruposConfigurados.forEach((grupo) => {
+      grupo.items.forEach((agg) => {
+        const id = String(agg._id || agg.agregadoId || '');
+        if (!id) return;
+        map.set(id, { groupKey: grupo.key });
+      });
+    });
+    return map;
+  }, [gruposConfigurados]);
+
   const [seleccionados, setSeleccionados] = useState([]);
 
   useEffect(() => {
@@ -37,22 +74,44 @@ export default function SelectorAgregadosDialog({
     }
   }, [open, producto?._id, variante?._id]);
 
+  const buildAgregadoPayload = (agregado) => ({
+    agregadoId: agregado._id || agregado.agregadoId || null,
+    nombre: agregado.nombre,
+    precio: Number(agregado.precio) || 0
+  });
+
   const toggleAgregado = (agregado) => {
+    const agregadoId = String(agregado._id || agregado.agregadoId || '');
     setSeleccionados((prev) => {
-      const existe = prev.some((agg) => (agg.agregadoId || agg._id) === (agregado._id || agregado.agregadoId));
+      const existe = prev.some((agg) => String(agg.agregadoId || agg._id || '') === agregadoId);
       if (existe) {
-        return prev.filter((agg) => (agg.agregadoId || agg._id) !== (agregado._id || agregado.agregadoId));
+        return prev.filter((agg) => String(agg.agregadoId || agg._id || '') !== agregadoId);
       }
-      return [
-        ...prev,
-        {
-          agregadoId: agregado._id || agregado.agregadoId || null,
-          nombre: agregado.nombre,
-          precio: Number(agregado.precio) || 0
-        }
-      ];
+      return [...prev, buildAgregadoPayload(agregado)];
     });
   };
+
+  const seleccionarUnico = (groupKey, agregado) => {
+    const agregadoId = agregado._id || agregado.agregadoId;
+    if (!agregadoId) return;
+    setSeleccionados((prev) => {
+      const next = prev.filter((item) => {
+        const itemId = String(item.agregadoId || item._id || '');
+        const itemMeta = metaByAgregadoId.get(itemId);
+        return itemMeta?.groupKey !== groupKey;
+      });
+      return [...next, buildAgregadoPayload(agregado)];
+    });
+  };
+
+  const getSeleccionadoRadio = (groupKey) =>
+    (
+      seleccionados.find((item) => {
+        const itemId = String(item.agregadoId || item._id || '');
+        const itemMeta = metaByAgregadoId.get(itemId);
+        return itemMeta?.groupKey === groupKey;
+      }) || {}
+    ).agregadoId || '';
 
   const totalExtras = seleccionados.reduce((acc, agg) => acc + (Number(agg.precio) || 0), 0);
 
@@ -65,42 +124,96 @@ export default function SelectorAgregadosDialog({
           {variante?.nombre ? ` - ${variante.nombre}` : ''}
         </Typography>
 
-        {agregadosDisponibles.length === 0 ? (
+        {gruposConfigurados.length === 0 ? (
           <Typography color="text.secondary">Este producto no tiene agregados configurados.</Typography>
         ) : (
-          <Stack spacing={1.25}>
-            {agregadosDisponibles.map((agg) => {
-              const seleccionado = seleccionados.some(
-                (item) => (item.agregadoId || item._id) === (agg._id || agg.agregadoId)
-              );
-              return (
-                <Box
-                  key={agg._id || agg.agregadoId || agg.nombre}
-                  sx={{
-                    px: 1.25,
-                    py: 0.75,
-                    borderRadius: 1.5,
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}
-                >
-                  <FormControlLabel
-                    sx={{ width: '100%', m: 0 }}
-                    control={
-                      <Checkbox checked={seleccionado} onChange={() => toggleAgregado(agg)} />
-                    }
-                    label={
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
-                        <Typography>{agg.nombre}</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {formatearPrecio(agg.precio)}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </Box>
-              );
-            })}
+          <Stack spacing={2}>
+            {gruposConfigurados.map((grupo) => (
+              <Box key={grupo.key}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  {grupo.titulo} {grupo.modoSeleccion === 'unico' ? '(elige uno)' : '(elige uno o varios)'}
+                </Typography>
+                {grupo.modoSeleccion === 'unico' ? (
+                  <RadioGroup
+                    value={String(getSeleccionadoRadio(grupo.key))}
+                    onChange={(event) => {
+                      const elegido = grupo.items.find(
+                        (agg) => String(agg._id || agg.agregadoId || '') === String(event.target.value)
+                      );
+                      if (elegido) {
+                        seleccionarUnico(grupo.key, elegido);
+                      }
+                    }}
+                  >
+                    <Stack spacing={1.25}>
+                      {grupo.items.map((agg) => (
+                        <Box
+                          key={agg._id || agg.agregadoId || agg.nombre}
+                          sx={{
+                            px: 1.25,
+                            py: 0.75,
+                            borderRadius: 1.5,
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        >
+                          <FormControlLabel
+                            sx={{ width: '100%', m: 0 }}
+                            value={String(agg._id || agg.agregadoId || '')}
+                            control={<Radio />}
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                                <Typography>{agg.nombre}</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {formatearPrecio(agg.precio)}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </Box>
+                      ))}
+                    </Stack>
+                  </RadioGroup>
+                ) : (
+                  <Stack spacing={1.25}>
+                    {grupo.items.map((agg) => {
+                      const seleccionado = seleccionados.some(
+                        (item) =>
+                          String(item.agregadoId || item._id || '') ===
+                          String(agg._id || agg.agregadoId || '')
+                      );
+                      return (
+                        <Box
+                          key={agg._id || agg.agregadoId || agg.nombre}
+                          sx={{
+                            px: 1.25,
+                            py: 0.75,
+                            borderRadius: 1.5,
+                            border: '1px solid',
+                            borderColor: 'divider'
+                          }}
+                        >
+                          <FormControlLabel
+                            sx={{ width: '100%', m: 0 }}
+                            control={
+                              <Checkbox checked={seleccionado} onChange={() => toggleAgregado(agg)} />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 1 }}>
+                                <Typography>{agg.nombre}</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {formatearPrecio(agg.precio)}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Box>
+            ))}
           </Stack>
         )}
       </DialogContent>

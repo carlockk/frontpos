@@ -115,7 +115,7 @@ export default function ModalCrearProducto({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Error al crear producto');
+      setError(err?.response?.data?.error || 'Error al crear producto');
     }
   };
 

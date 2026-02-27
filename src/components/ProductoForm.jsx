@@ -183,7 +183,7 @@ export default function ProductoForm({ onSuccess, onCancel }) {
       onSuccess?.(res?.data);
     } catch (err) {
       console.error(err);
-      setError('Error al crear el producto. Intentalo nuevamente.');
+      setError(err?.response?.data?.error || 'Error al crear el producto. Intentalo nuevamente.');
     } finally {
       setCargando(false);
     }

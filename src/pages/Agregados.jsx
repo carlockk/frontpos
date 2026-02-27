@@ -39,7 +39,7 @@ import {
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const emptyGrupo = { titulo: '', descripcion: '' };
+const emptyGrupo = { titulo: '', descripcion: '', modoSeleccion: 'multiple' };
 const emptyAgregado = {
   nombre: '',
   descripcion: '',
@@ -132,7 +132,11 @@ export default function Agregados() {
 
   const openEditarGrupo = (grupo) => {
     setGrupoEditId(grupo._id);
-    setGrupoForm({ titulo: grupo.titulo || '', descripcion: grupo.descripcion || '' });
+    setGrupoForm({
+      titulo: grupo.titulo || '',
+      descripcion: grupo.descripcion || '',
+      modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple'
+    });
     setGrupoOpen(true);
   };
 
@@ -294,17 +298,19 @@ export default function Agregados() {
             <TableRow>
               <TableCell>Titulo</TableCell>
               <TableCell>Descripcion</TableCell>
+              <TableCell>Tipo seleccion</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {grupos.length === 0 ? (
-              <TableRow><TableCell colSpan={3} align="center">Sin grupos</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} align="center">Sin grupos</TableCell></TableRow>
             ) : (
               grupos.map((grupo) => (
                 <TableRow key={grupo._id}>
                   <TableCell>{grupo.titulo}</TableCell>
                   <TableCell>{grupo.descripcion || '-'}</TableCell>
+                  <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
                   <TableCell align="right">
                     {puedeCrearEditar && (
                       <IconButton size="small" onClick={() => openEditarGrupo(grupo)}>
@@ -384,6 +390,15 @@ export default function Agregados() {
               value={grupoForm.descripcion}
               onChange={(e) => setGrupoForm((prev) => ({ ...prev, descripcion: e.target.value }))}
             />
+            <TextField
+              select
+              label="Tipo de seleccion"
+              value={grupoForm.modoSeleccion}
+              onChange={(e) => setGrupoForm((prev) => ({ ...prev, modoSeleccion: e.target.value }))}
+            >
+              <MenuItem value="multiple">Check (permite elegir varios)</MenuItem>
+              <MenuItem value="unico">Radio (permite elegir uno)</MenuItem>
+            </TextField>
           </Stack>
         </DialogContent>
         <DialogActions>
