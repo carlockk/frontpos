@@ -268,6 +268,60 @@ export default function Agregados() {
     }
   };
 
+  const editarCategoriaAgregados = async (categoria) => {
+    if (!puedeCrearEditar) return;
+    const actual = categoria?.nombre === 'Sin categoria principal' ? '' : String(categoria?.nombre || '');
+    const nuevo = window.prompt(
+      'Nuevo nombre para la categoria de agregados (deja vacio para "Sin categoria principal"):',
+      actual
+    );
+    if (nuevo === null) return;
+
+    const categoriaPrincipal = String(nuevo || '').trim();
+    try {
+      await Promise.all(
+        (categoria?.grupos || []).map((grupo) =>
+          editarGrupoAgregados(grupo._id, {
+            categoriaPrincipal,
+            titulo: grupo.titulo || '',
+            descripcion: grupo.descripcion || '',
+            modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple'
+          })
+        )
+      );
+      setInfo('Categoria de agregados actualizada.');
+      cargar();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo editar la categoria de agregados.');
+    }
+  };
+
+  const borrarCategoriaAgregados = async (categoria) => {
+    if (!puedeEliminar) return;
+
+    const gruposCategoria = Array.isArray(categoria?.grupos) ? categoria.grupos : [];
+    const groupIds = gruposCategoria.map((g) => String(g._id));
+    const opcionesCategoria = groupIds.flatMap((groupId) => agregadosByGrupo.get(groupId) || []);
+
+    const confirmacion = window.confirm(
+      `Seguro que deseas eliminar la categoria "${categoria?.nombre}"?\n\n` +
+      `Tambien se eliminaran todos sus contenidos:\n` +
+      `- Titulos: ${gruposCategoria.length}\n` +
+      `- Opciones: ${opcionesCategoria.length}\n\n` +
+      `Esta accion no se puede deshacer.`
+    );
+    if (!confirmacion) return;
+
+    try {
+      await Promise.all(opcionesCategoria.map((agg) => eliminarAgregado(agg._id)));
+      await Promise.all(gruposCategoria.map((grupo) => eliminarGrupoAgregados(grupo._id)));
+      setInfo('Categoria de agregados y su contenido eliminados.');
+      cargar();
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar la categoria de agregados.');
+    }
+  };
+
   const openCrearAgregado = () => {
     setAgregadoEditId('');
     setAgregadoForm(emptyAgregado);
@@ -394,11 +448,12 @@ export default function Agregados() {
               <TableCell>Titulos de agregado</TableCell>
               <TableCell>Opciones</TableCell>
               <TableCell align="right">Abrir</TableCell>
+              <TableCell align="right">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {categoriasAgrupadas.length === 0 ? (
-              <TableRow><TableCell colSpan={4} align="center">Sin categorias de agregados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} align="center">Sin categorias de agregados</TableCell></TableRow>
             ) : (
               categoriasAgrupadas.map((categoria) => (
                 <TableRow key={categoria.nombre} selected={categoria.nombre === categoriaActiva}>
@@ -409,6 +464,18 @@ export default function Agregados() {
                     <Button size="small" onClick={() => setCategoriaActiva(categoria.nombre)}>
                       Ver titulos
                     </Button>
+                  </TableCell>
+                  <TableCell align="right">
+                    {puedeCrearEditar && (
+                      <IconButton size="small" onClick={() => editarCategoriaAgregados(categoria)}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                    {puedeEliminar && (
+                      <IconButton size="small" color="error" onClick={() => borrarCategoriaAgregados(categoria)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
