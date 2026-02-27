@@ -5,6 +5,7 @@ import {
   Button,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   InputLabel,
   MenuItem,
   Select,
@@ -88,6 +89,15 @@ export default function ProductoForm({ onSuccess, onCancel }) {
     });
     return map;
   }, [agregadosOptions]);
+
+  const gruposConCantidad = useMemo(
+    () =>
+      (gruposAgregados || []).map((grupo) => ({
+        ...grupo,
+        opcionesCount: (agregadosByGrupo.get(String(grupo._id)) || []).length
+      })),
+    [gruposAgregados, agregadosByGrupo]
+  );
 
   const syncGruposDesdeAgregados = (agregadosIds) => {
     const groups = gruposAgregados
@@ -310,12 +320,16 @@ export default function ProductoForm({ onSuccess, onCancel }) {
             value={gruposSeleccionados}
             onChange={(e) => handleChangeGrupos(e.target.value)}
           >
-            {gruposAgregados.map((grupo) => (
-              <MenuItem key={grupo._id} value={grupo._id}>
+            {gruposConCantidad.map((grupo) => (
+              <MenuItem key={grupo._id} value={grupo._id} disabled={grupo.opcionesCount === 0}>
                 {grupo.categoriaPrincipal ? `${grupo.categoriaPrincipal} / ` : ''}{grupo.titulo}
+                {` (${grupo.opcionesCount})`}
               </MenuItem>
             ))}
           </Select>
+          <FormHelperText>
+            Solo puedes seleccionar titulos que tengan opciones. Crea opciones en Agregados si aparece (0).
+          </FormHelperText>
         </FormControl>
 
         <FormControl fullWidth>
