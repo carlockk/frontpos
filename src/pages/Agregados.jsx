@@ -49,7 +49,7 @@ const emptyAgregado = {
   nombre: '',
   descripcion: '',
   precio: '',
-  grupo: '',
+  grupos: [],
   categorias: [],
   productos: []
 };
@@ -145,10 +145,15 @@ export default function Agregados() {
   const agregadosByGrupo = useMemo(() => {
     const map = new Map();
     (agregados || []).forEach((agg) => {
-      const groupId = String(agg?.grupo?._id || '');
-      if (!groupId) return;
-      if (!map.has(groupId)) map.set(groupId, []);
-      map.get(groupId).push(agg);
+      const gruposAgg = Array.isArray(agg?.grupos) && agg.grupos.length > 0
+        ? agg.grupos
+        : (agg?.grupo ? [agg.grupo] : []);
+      gruposAgg.forEach((group) => {
+        const groupId = String(group?._id || group || '');
+        if (!groupId) return;
+        if (!map.has(groupId)) map.set(groupId, []);
+        map.get(groupId).push(agg);
+      });
     });
     return map;
   }, [agregados]);
@@ -356,7 +361,14 @@ export default function Agregados() {
       descripcion: agregado.descripcion || '',
       precio:
         agregado.precio === null || agregado.precio === undefined ? '' : String(agregado.precio),
-      grupo: agregado.grupo?._id || '',
+      grupos: Array.from(
+        new Set(
+          [
+            ...((agregado.grupos || []).map((g) => String(g?._id || g))),
+            ...(agregado.grupo ? [String(agregado.grupo?._id || agregado.grupo)] : [])
+          ].filter(Boolean)
+        )
+      ),
       categorias: (agregado.categorias || []).map((c) => c._id || c),
       productos: (agregado.productos || []).map((p) => p._id || p)
     });
@@ -372,7 +384,8 @@ export default function Agregados() {
       nombre: agregadoForm.nombre.trim(),
       descripcion: agregadoForm.descripcion.trim(),
       precio: agregadoForm.precio === '' ? null : Number(agregadoForm.precio),
-      grupo: agregadoForm.grupo || null,
+      grupos: agregadoForm.grupos || [],
+      grupo: (agregadoForm.grupos || [])[0] || null,
       categorias: agregadoForm.categorias || [],
       productos: agregadoForm.productos || []
     };
@@ -584,7 +597,16 @@ export default function Agregados() {
               agregados.map((agregado) => (
                 <TableRow key={agregado._id}>
                   <TableCell>{agregado.nombre}</TableCell>
-                  <TableCell>{agregado.grupo?.titulo || '-'}</TableCell>
+                  <TableCell>
+                    {Array.from(
+                      new Set(
+                        [
+                          ...((agregado.grupos || []).map((g) => g?.titulo || '')),
+                          ...(agregado.grupo?.titulo ? [agregado.grupo.titulo] : [])
+                        ].filter(Boolean)
+                      )
+                    ).join(', ') || '-'}
+                  </TableCell>
                   <TableCell>{agregado.precio === null || agregado.precio === undefined ? '-' : agregado.precio}</TableCell>
                   <TableCell>{(agregado.categorias || []).map((c) => c.nombre).join(', ') || '-'}</TableCell>
                   <TableCell>
@@ -758,11 +780,11 @@ export default function Agregados() {
             />
             <TextField
               select
-              label="Grupo (opcional)"
-              value={agregadoForm.grupo}
-              onChange={(e) => setAgregadoForm((prev) => ({ ...prev, grupo: e.target.value }))}
+              SelectProps={{ multiple: true }}
+              label="Titulos (opcional)"
+              value={agregadoForm.grupos}
+              onChange={(e) => setAgregadoForm((prev) => ({ ...prev, grupos: e.target.value }))}
             >
-              <MenuItem value="">Sin grupo</MenuItem>
               {grupos.map((g) => (
                 <MenuItem key={g._id} value={g._id}>{g.titulo}</MenuItem>
               ))}

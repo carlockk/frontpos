@@ -38,18 +38,38 @@ export default function SelectorAgregadosDialog({
       const agregadoId = String(agg._id || agg.agregadoId || '');
       if (!agregadoId) return;
 
-      const grupo = agg?.grupo && typeof agg.grupo === 'object' ? agg.grupo : null;
-      const key = grupo?._id ? String(grupo._id) : '__sin_grupo__';
-      if (!byKey.has(key)) {
-        byKey.set(key, {
-          key,
-          categoriaPrincipal: grupo?.categoriaPrincipal || '',
-          titulo: grupo?.titulo || 'Otros agregados',
-          modoSeleccion: grupo?.modoSeleccion === 'unico' ? 'unico' : 'multiple',
-          items: []
-        });
+      const grupos = Array.isArray(agg?.grupos) && agg.grupos.length > 0
+        ? agg.grupos
+        : (agg?.grupo ? [agg.grupo] : []);
+
+      if (grupos.length === 0) {
+        const key = '__sin_grupo__';
+        if (!byKey.has(key)) {
+          byKey.set(key, {
+            key,
+            categoriaPrincipal: '',
+            titulo: 'Otros agregados',
+            modoSeleccion: 'multiple',
+            items: []
+          });
+        }
+        byKey.get(key).items.push(agg);
+        return;
       }
-      byKey.get(key).items.push(agg);
+
+      grupos.forEach((grupo) => {
+        const key = grupo?._id ? String(grupo._id) : '__sin_grupo__';
+        if (!byKey.has(key)) {
+          byKey.set(key, {
+            key,
+            categoriaPrincipal: grupo?.categoriaPrincipal || '',
+            titulo: grupo?.titulo || 'Otros agregados',
+            modoSeleccion: grupo?.modoSeleccion === 'unico' ? 'unico' : 'multiple',
+            items: []
+          });
+        }
+        byKey.get(key).items.push(agg);
+      });
     });
 
     return Array.from(byKey.values());

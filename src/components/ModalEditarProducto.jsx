@@ -99,10 +99,17 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
 
   const agregadosByGrupo = useMemo(() => {
     const map = new Map();
+    const getGroupIds = (agg) => {
+      const fromArray = Array.isArray(agg?.grupos) ? agg.grupos : [];
+      const fromLegacy = agg?.grupo ? [agg.grupo] : [];
+      return Array.from(new Set([...fromArray, ...fromLegacy].map((id) => String(id || '')).filter(Boolean)));
+    };
     agregadosOptions.forEach((agg) => {
-      const key = agg.grupo || '';
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(String(agg._id));
+      const groupIds = getGroupIds(agg);
+      groupIds.forEach((key) => {
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(String(agg._id));
+      });
     });
     return map;
   }, [agregadosOptions]);
