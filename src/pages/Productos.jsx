@@ -99,6 +99,7 @@ export default function Productos() {
   const [baseUseVariantes, setBaseUseVariantes] = useState([]);
   const [locales, setLocales] = useState([]);
   const [targetLocalId, setTargetLocalId] = useState('');
+  const [usandoTodasBases, setUsandoTodasBases] = useState(false);
   const [baseForm, setBaseForm] = useState({
     nombre: '',
     descripcion: '',
@@ -243,6 +244,66 @@ export default function Productos() {
     setBaseUseVariantes([]);
     setTargetLocalId('');
     setOpenBaseUse(true);
+  };
+
+  const handleUsarTodasBases = async () => {
+    if (!Array.isArray(bases) || bases.length === 0) {
+      alert('No hay productos en el catalogo base para usar.');
+      return;
+    }
+
+    const localDestino = esSuperadmin
+      ? (targetLocalId || selectedLocal?._id)
+      : undefined;
+
+    if (esSuperadmin && !localDestino) {
+      alert('Selecciona un local destino para usar todos los productos.');
+      return;
+    }
+    if (!window.confirm('Se intentaran agregar todos los productos del catalogo base. Deseas continuar?')) {
+      return;
+    }
+
+    setUsandoTodasBases(true);
+
+    try {
+      const resultados = await Promise.allSettled(
+        bases.map((base) =>
+          usarProductoBaseEnLocal(
+            base._id,
+            { precio: 0, controlarStock: 'false' },
+            localDestino
+          )
+        )
+      );
+
+      let agregados = 0;
+      let existentes = 0;
+      let errores = 0;
+
+      resultados.forEach((resultado) => {
+        if (resultado.status === 'fulfilled') {
+          agregados += 1;
+          return;
+        }
+        const mensajeError = resultado.reason?.response?.data?.error || '';
+        if (String(mensajeError).toLowerCase().includes('ya existe')) {
+          existentes += 1;
+        } else {
+          errores += 1;
+        }
+      });
+
+      setMensaje(
+        `Carga masiva finalizada: ${agregados} agregados, ${existentes} ya existentes, ${errores} con error`
+      );
+      await cargarDatos();
+      setOpenBase(false);
+    } catch (_err) {
+      alert('No se pudo completar la carga masiva');
+    } finally {
+      setUsandoTodasBases(false);
+    }
   };
 
   const confirmarUsarBase = async () => {
@@ -690,10 +751,45 @@ export default function Productos() {
       <Dialog open={openBase} onClose={() => setOpenBase(false)} fullWidth maxWidth="sm">
         <DialogTitle>Catalogo Base</DialogTitle>
         <DialogContent dividers>
-          <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
-            <Button size="small" onClick={() => setOpenBaseCreate(true)}>
-              Crear producto base
-            </Button>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            spacing={1}
+            sx={{ mb: 1 }}
+          >
+            {esSuperadmin && (
+              <TextField
+                select
+                size="small"
+                label="Local destino"
+                value={targetLocalId}
+                onChange={(e) => setTargetLocalId(e.target.value)}
+                sx={{ minWidth: { sm: 230 } }}
+              >
+                <MenuItem value="">
+                  {locales.length === 0 ? 'No hay locales disponibles' : 'Local activo'}
+                </MenuItem>
+                {locales.map((local) => (
+                  <MenuItem key={local._id} value={local._id}>
+                    {local.nombre}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleUsarTodasBases}
+                disabled={usandoTodasBases || bases.length === 0}
+              >
+                {usandoTodasBases ? 'Cargando...' : 'Usar todos en este local'}
+              </Button>
+              <Button size="small" onClick={() => setOpenBaseCreate(true)}>
+                Crear producto base
+              </Button>
+            </Stack>
           </Stack>
           {bases.length === 0 ? (
             <DialogContentText>No hay productos base aun.</DialogContentText>
