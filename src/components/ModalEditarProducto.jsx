@@ -192,6 +192,7 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
     data.append('descripcion', form.descripcion.trim());
     data.append('imagen_url', form.imagen_url?.trim() || '');
     data.append('categoria', form.categoria || '');
+    data.append('controlarStock', 'true');
     if (imagenNueva) {
       data.append('imagen', imagenNueva);
     }
