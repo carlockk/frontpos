@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -42,6 +42,7 @@ import SelectorAgregadosDialog from '../components/SelectorAgregadosDialog';
 // ✅ Ahora usamos la base de archivos que sale de api.js
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
 const MIN_STOCK_ALERT = 3;
+const CATEGORY_ORDER_EVENT = 'categoria-order-updated';
 
 const buildCategoryLabelMap = (items) => {
   const byId = new Map(items.map((cat) => [cat._id, cat]));
@@ -109,8 +110,6 @@ export default function POS() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = user?.id || user?._id || 'anonimo';
   const userKey = `${userId}_${selectedLocal?._id || 'sin-local'}`;
-
-  const [productosOrdenados, setProductosOrdenados] = useState([]);
 
   const tieneVariantes = (producto) =>
     Array.isArray(producto?.variantes) &&
@@ -194,9 +193,6 @@ export default function POS() {
 
     setProductos(resProd.data);
     setCategorias(categoriasOrdenadas);
-    setProductosOrdenados(
-      ordenarProductosPorCategorias(resProd.data, categoriasOrdenadas)
-    );
   };
 
   useEffect(() => {
@@ -205,10 +201,24 @@ export default function POS() {
     const handler = (e) => {
       if (e.key === `ordenCategorias_${userKey}`) cargarDatos();
     };
+    const localHandler = (e) => {
+      if (e?.detail?.key === `ordenCategorias_${userKey}`) {
+        cargarDatos();
+      }
+    };
 
     window.addEventListener('storage', handler);
-    return () => window.removeEventListener('storage', handler);
+    window.addEventListener(CATEGORY_ORDER_EVENT, localHandler);
+    return () => {
+      window.removeEventListener('storage', handler);
+      window.removeEventListener(CATEGORY_ORDER_EVENT, localHandler);
+    };
   }, [selectedLocal?._id]);
+
+  const productosOrdenados = useMemo(
+    () => ordenarProductosPorCategorias(productos, categorias),
+    [productos, categorias]
+  );
 
   useEffect(() => {
     const comanda = location.state?.comandaPendiente;
@@ -294,18 +304,16 @@ export default function POS() {
     items.splice(result.destination.index, 0, reordenado);
 
     setCategorias(items);
-    localStorage.setItem(
-      `ordenCategorias_${userKey}`,
-      JSON.stringify(items.map((c) => c._id))
-    );
-    setProductosOrdenados(
-      ordenarProductosPorCategorias(productos, items)
-    );
+    const storageKey = `ordenCategorias_${userKey}`;
+    localStorage.setItem(storageKey, JSON.stringify(items.map((c) => c._id)));
+    window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
     setSnackbarOpen(true);
   };
 
   const resetOrden = () => {
-    localStorage.removeItem(`ordenCategorias_${userKey}`);
+    const storageKey = `ordenCategorias_${userKey}`;
+    localStorage.removeItem(storageKey);
+    window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
     cargarDatos();
   };
 
@@ -335,6 +343,33 @@ export default function POS() {
 
   const obtenerTituloCategoria = (producto) =>
     producto?.categoria?.label || producto?.categoria?.nombre || 'Sin categoria';
+
+  const productosAgrupados = (() => {
+    const grupos = [];
+    const usados = new Set();
+
+    categorias.forEach((cat) => {
+      const items = productosFiltrados.filter((prod) => prod?.categoria?._id === cat._id);
+      if (items.length === 0) return;
+      items.forEach((prod) => usados.add(prod._id));
+      grupos.push({
+        id: cat._id,
+        titulo: cat.label || cat.nombre || 'Sin categoria',
+        productos: items
+      });
+    });
+
+    const sinCategoria = productosFiltrados.filter((prod) => !usados.has(prod._id));
+    if (sinCategoria.length > 0) {
+      grupos.push({
+        id: 'sin-categoria',
+        titulo: obtenerTituloCategoria(sinCategoria[0]),
+        productos: sinCategoria
+      });
+    }
+
+    return grupos;
+  })();
 
   if (!cajaVerificada) {
     return (
@@ -455,11 +490,9 @@ export default function POS() {
           alignItems: 'stretch'
         }}
       >
-        {productosFiltrados.map((prod, index) => {
-          const categoriaIdActual = prod?.categoria?._id || 'sin-categoria';
-          const categoriaIdAnterior =
-            productosFiltrados[index - 1]?.categoria?._id || 'sin-categoria';
-          const mostrarTituloCategoria = index === 0 || categoriaIdActual !== categoriaIdAnterior;
+        {productosAgrupados.flatMap((grupo, groupIndex) =>
+          grupo.productos.map((prod, productIndex) => {
+            const mostrarTituloCategoria = productIndex === 0;
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
           const agotado = tieneVariantes(prod)
@@ -484,7 +517,7 @@ export default function POS() {
                 <Box
                   sx={{
                     gridColumn: '1 / -1',
-                    mt: index === 0 ? 0 : 1.5
+                    mt: groupIndex === 0 ? 0 : 1.5
                   }}
                 >
                   <Typography
@@ -495,7 +528,7 @@ export default function POS() {
                       color: titleColor
                     }}
                   >
-                    {obtenerTituloCategoria(prod)}
+                    {grupo.titulo}
                   </Typography>
                 </Box>
               )}
@@ -789,7 +822,8 @@ export default function POS() {
               </Box>
             </Fragment>
           );
-        })}
+          })
+        )}
       </Box>
 
       {/* Botón flotante derecho */}
