@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -333,6 +333,9 @@ export default function POS() {
     return pasaBusqueda && coincideCategoria;
   });
 
+  const obtenerTituloCategoria = (producto) =>
+    producto?.categoria?.label || producto?.categoria?.nombre || 'Sin categoria';
+
   if (!cajaVerificada) {
     return (
       <Box
@@ -452,7 +455,11 @@ export default function POS() {
           alignItems: 'stretch'
         }}
       >
-        {productosFiltrados.map((prod) => {
+        {productosFiltrados.map((prod, index) => {
+          const categoriaIdActual = prod?.categoria?._id || 'sin-categoria';
+          const categoriaIdAnterior =
+            productosFiltrados[index - 1]?.categoria?._id || 'sin-categoria';
+          const mostrarTituloCategoria = index === 0 || categoriaIdActual !== categoriaIdAnterior;
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
           const agotado = tieneVariantes(prod)
@@ -472,28 +479,47 @@ export default function POS() {
           const hayVariantes = tieneVariantes(prod);
 
           return (
-            <Box
-              key={prod._id}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: 1.25,
-                border: `1px solid ${cardBorderColor}`,
-                backgroundColor: cardBackground,
-                boxShadow:
-                  '0 8px 24px rgba(15,23,42,0.12)',
-                p: 1.5,
-                minHeight: 280,
-                transition:
-                  'transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  borderColor: theme.palette.primary.main,
+            <Fragment key={prod._id}>
+              {mostrarTituloCategoria && (
+                <Box
+                  sx={{
+                    gridColumn: '1 / -1',
+                    mt: index === 0 ? 0 : 1.5
+                  }}
+                >
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 800,
+                      letterSpacing: 0.4,
+                      color: titleColor
+                    }}
+                  >
+                    {obtenerTituloCategoria(prod)}
+                  </Typography>
+                </Box>
+              )}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 1.25,
+                  border: `1px solid ${cardBorderColor}`,
+                  backgroundColor: cardBackground,
                   boxShadow:
-                    '0 16px 32px rgba(15,23,42,0.18)'
-                }
-              }}
-            >
+                    '0 8px 24px rgba(15,23,42,0.12)',
+                  p: 1.5,
+                  minHeight: 280,
+                  transition:
+                    'transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    borderColor: theme.palette.primary.main,
+                    boxShadow:
+                      '0 16px 32px rgba(15,23,42,0.18)'
+                  }
+                }}
+              >
               <Box
                 sx={{
                   position: 'relative',
@@ -760,7 +786,8 @@ export default function POS() {
               >
                 {hayVariantes ? 'Elegir variante' : 'Agregar'}
               </Button>
-            </Box>
+              </Box>
+            </Fragment>
           );
         })}
       </Box>
