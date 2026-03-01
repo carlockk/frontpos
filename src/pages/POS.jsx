@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,6 @@ import SelectorAgregadosDialog from '../components/SelectorAgregadosDialog';
 // ✅ Ahora usamos la base de archivos que sale de api.js
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
 const MIN_STOCK_ALERT = 3;
-const CATEGORY_ORDER_EVENT = 'categoria-order-updated';
 
 const buildCategoryLabelMap = (items) => {
   const byId = new Map(items.map((cat) => [cat._id, cat]));
@@ -75,7 +74,6 @@ export default function POS() {
   const [openCrear, setOpenCrear] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [ordenAnimKey, setOrdenAnimKey] = useState(0);
   const [productoConVariantes, setProductoConVariantes] = useState(null);
   const [productoConAgregados, setProductoConAgregados] = useState(null);
 
@@ -111,6 +109,7 @@ export default function POS() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = user?.id || user?._id || 'anonimo';
   const userKey = `${userId}_${selectedLocal?._id || 'sin-local'}`;
+  const [productosOrdenados, setProductosOrdenados] = useState([]);
 
   const tieneVariantes = (producto) =>
     Array.isArray(producto?.variantes) &&
@@ -194,36 +193,21 @@ export default function POS() {
 
     setProductos(resProd.data);
     setCategorias(categoriasOrdenadas);
+    setProductosOrdenados(
+      ordenarProductosPorCategorias(resProd.data, categoriasOrdenadas)
+    );
   };
 
   useEffect(() => {
     cargarDatos();
 
     const handler = (e) => {
-      if (e.key === `ordenCategorias_${userKey}`) {
-        setOrdenAnimKey((prev) => prev + 1);
-        cargarDatos();
-      }
-    };
-    const localHandler = (e) => {
-      if (e?.detail?.key === `ordenCategorias_${userKey}`) {
-        setOrdenAnimKey((prev) => prev + 1);
-        cargarDatos();
-      }
+      if (e.key === `ordenCategorias_${userKey}`) cargarDatos();
     };
 
     window.addEventListener('storage', handler);
-    window.addEventListener(CATEGORY_ORDER_EVENT, localHandler);
-    return () => {
-      window.removeEventListener('storage', handler);
-      window.removeEventListener(CATEGORY_ORDER_EVENT, localHandler);
-    };
+    return () => window.removeEventListener('storage', handler);
   }, [selectedLocal?._id]);
-
-  const productosOrdenados = useMemo(
-    () => ordenarProductosPorCategorias(productos, categorias),
-    [productos, categorias]
-  );
 
   useEffect(() => {
     const comanda = location.state?.comandaPendiente;
@@ -309,18 +293,18 @@ export default function POS() {
     items.splice(result.destination.index, 0, reordenado);
 
     setCategorias(items);
-    const storageKey = `ordenCategorias_${userKey}`;
-    localStorage.setItem(storageKey, JSON.stringify(items.map((c) => c._id)));
-    window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
-    setOrdenAnimKey((prev) => prev + 1);
+    localStorage.setItem(
+      `ordenCategorias_${userKey}`,
+      JSON.stringify(items.map((c) => c._id))
+    );
+    setProductosOrdenados(
+      ordenarProductosPorCategorias(productos, items)
+    );
     setSnackbarOpen(true);
   };
 
   const resetOrden = () => {
-    const storageKey = `ordenCategorias_${userKey}`;
-    localStorage.removeItem(storageKey);
-    window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
-    setOrdenAnimKey((prev) => prev + 1);
+    localStorage.removeItem(`ordenCategorias_${userKey}`);
     cargarDatos();
   };
 
@@ -347,34 +331,6 @@ export default function POS() {
 
     return pasaBusqueda && coincideCategoria;
   });
-
-  const obtenerTituloCategoria = (producto) =>
-    producto?.categoria?.label || producto?.categoria?.nombre || 'Sin categoria';
-
-  const obtenerClaveCategoria = (producto) => {
-    if (producto?.categoria?._id) return `id:${producto.categoria._id}`;
-    const nombre = String(producto?.categoria?.nombre || 'Sin categoria').trim().toLowerCase();
-    return `name:${nombre || 'sin categoria'}`;
-  };
-
-  const ordenCategoriaMap = useMemo(() => {
-    const map = new Map();
-    categorias.forEach((cat, index) => {
-      map.set(String(cat._id), index);
-    });
-    return map;
-  }, [categorias]);
-
-  const productosFiltradosOrdenados = useMemo(() => {
-    return [...productosFiltrados].sort((a, b) => {
-      const aId = a?.categoria?._id ? String(a.categoria._id) : null;
-      const bId = b?.categoria?._id ? String(b.categoria._id) : null;
-      const aOrden = aId && ordenCategoriaMap.has(aId) ? ordenCategoriaMap.get(aId) : Number.MAX_SAFE_INTEGER;
-      const bOrden = bId && ordenCategoriaMap.has(bId) ? ordenCategoriaMap.get(bId) : Number.MAX_SAFE_INTEGER;
-      if (aOrden !== bOrden) return aOrden - bOrden;
-      return String(a?.nombre || '').localeCompare(String(b?.nombre || ''), 'es');
-    });
-  }, [productosFiltrados, ordenCategoriaMap]);
 
   if (!cajaVerificada) {
     return (
@@ -488,14 +444,6 @@ export default function POS() {
       {/* Grid de productos */}
       <Box
         sx={{
-          '@keyframes posTitleIn': {
-            '0%': { opacity: 0, transform: 'translateY(6px)' },
-            '100%': { opacity: 1, transform: 'translateY(0)' }
-          },
-          '@keyframes posCardIn': {
-            '0%': { opacity: 0.75, transform: 'translateY(8px) scale(0.99)' },
-            '100%': { opacity: 1, transform: 'translateY(0) scale(1)' }
-          },
           display: 'grid',
           gridTemplateColumns:
             'repeat(auto-fill, minmax(180px, 1fr))',
@@ -503,10 +451,7 @@ export default function POS() {
           alignItems: 'stretch'
         }}
       >
-        {productosFiltradosOrdenados.map((prod, index) => {
-          const claveActual = obtenerClaveCategoria(prod);
-          const claveAnterior = index > 0 ? obtenerClaveCategoria(productosFiltradosOrdenados[index - 1]) : null;
-          const mostrarTituloCategoria = index === 0 || claveActual !== claveAnterior;
+        {productosFiltrados.map((prod) => {
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
           const agotado = tieneVariantes(prod)
@@ -526,28 +471,8 @@ export default function POS() {
           const hayVariantes = tieneVariantes(prod);
 
           return (
-            <Fragment key={prod._id}>
-              {mostrarTituloCategoria && (
-                <Box
-                  sx={{
-                    gridColumn: '1 / -1',
-                    mt: index === 0 ? 0 : 1.5,
-                    animation: ordenAnimKey ? 'posTitleIn 260ms ease both' : 'none'
-                  }}
-                >
-                  <Typography
-                    variant="subtitle1"
-                    sx={{
-                      fontWeight: 800,
-                      letterSpacing: 0.4,
-                      color: titleColor
-                    }}
-                  >
-                    {obtenerTituloCategoria(prod)}
-                  </Typography>
-                </Box>
-              )}
-              <Box
+            <Box
+              key={prod._id}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -560,8 +485,6 @@ export default function POS() {
                   minHeight: 280,
                   transition:
                     'transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease',
-                  animation: ordenAnimKey ? 'posCardIn 280ms ease both' : 'none',
-                  animationDelay: ordenAnimKey ? `${Math.min(index * 18, 220)}ms` : '0ms',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     borderColor: theme.palette.primary.main,
@@ -836,8 +759,7 @@ export default function POS() {
               >
                 {hayVariantes ? 'Elegir variante' : 'Agregar'}
               </Button>
-              </Box>
-            </Fragment>
+            </Box>
           );
         })}
       </Box>
