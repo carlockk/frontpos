@@ -27,8 +27,9 @@ export default function SelectorVariantes({ open, onClose, producto, onSelect })
         ) : (
           <Stack spacing={2}>
             {variantes.map((vari) => {
-              const stock = Number(vari.stock) || 0;
-              const agotado = stock === 0;
+              const stock = Number(vari.stock);
+              const stockControlado = Number.isFinite(stock) && stock > 0;
+              const agotado = Boolean(vari.agotado);
               const atributos = [vari.color, vari.talla].filter(Boolean).join(' / ') || 'Sin atributos';
               const sku = vari.sku || 'Sin SKU';
 
@@ -45,7 +46,9 @@ export default function SelectorVariantes({ open, onClose, producto, onSelect })
                     <Typography variant="body2" color="text.secondary">
                       SKU: {sku}
                     </Typography>
-                    <Typography variant="body2">Stock: {stock}</Typography>
+                    <Typography variant="body2">
+                      {agotado ? 'Estado: AGOTADO' : stockControlado ? `Stock: ${stock}` : 'Stock libre'}
+                    </Typography>
                     <Typography variant="body2">
                       Precio: {formatearPrecio(vari.precio, producto?.precio)}
                     </Typography>
@@ -55,7 +58,7 @@ export default function SelectorVariantes({ open, onClose, producto, onSelect })
                     disabled={agotado}
                     onClick={() => onSelect?.(vari)}
                   >
-                    {agotado ? 'Sin stock' : 'Agregar'}
+                    {agotado ? 'Agotado' : 'Agregar'}
                   </Button>
                 </Paper>
               );

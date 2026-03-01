@@ -42,10 +42,15 @@ const construirAtributos = (variante, atributos) => {
 };
 
 const obtenerStockDisponible = (producto, variante) => {
-  if (variante && typeof variante.stock === 'number') {
-    return variante.stock;
+  if (variante?.agotado) {
+    return 0;
   }
-  if (typeof producto?.stock === 'number') return producto.stock;
+  const stockVariante = Number(variante?.stock);
+  if (Number.isFinite(stockVariante) && stockVariante > 0) {
+    return stockVariante;
+  }
+  const stockProducto = Number(producto?.stock);
+  if (Number.isFinite(stockProducto) && stockProducto > 0) return stockProducto;
   return null;
 };
 

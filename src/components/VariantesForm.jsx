@@ -5,7 +5,9 @@ import {
   Typography,
   IconButton,
   Button,
-  Divider
+  Divider,
+  FormControlLabel,
+  Switch
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
@@ -17,7 +19,8 @@ const varianteBase = {
   talla: '',
   sku: '',
   precio: '',
-  stock: ''
+  stock: '',
+  agotado: false
 };
 
 export default function VariantesForm({ variantes = [], onChange }) {
@@ -120,6 +123,7 @@ export default function VariantesForm({ variantes = [], onChange }) {
                 type="number"
                 value={variante.stock}
                 onChange={(e) => handleChange(index, 'stock', e.target.value)}
+                helperText="Vacío o 0 = stock libre"
                 fullWidth
               />
               <TextField
@@ -130,6 +134,15 @@ export default function VariantesForm({ variantes = [], onChange }) {
                 fullWidth
               />
             </Stack>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={Boolean(variante.agotado)}
+                  onChange={(e) => handleChange(index, 'agotado', e.target.checked)}
+                />
+              }
+              label="Marcar como agotado"
+            />
           </Stack>
         </Box>
       ))}

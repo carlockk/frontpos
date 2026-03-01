@@ -122,19 +122,28 @@ export default function POS() {
     return Number.isFinite(numero) ? numero : null;
   };
 
+  const obtenerStockControlado = (valor) => {
+    const numero = normalizarNumero(valor);
+    return numero !== null && numero > 0 ? numero : null;
+  };
+
+  const varianteEstaAgotada = (variante) => Boolean(variante?.agotado);
+
+  const varianteDisponible = (variante) => !varianteEstaAgotada(variante);
+
   const obtenerStockTotal = (producto) => {
-    const stockVirtual = normalizarNumero(producto?.stock_total);
+    const stockVirtual = obtenerStockControlado(producto?.stock_total);
     if (stockVirtual !== null) return stockVirtual;
 
     if (tieneVariantes(producto)) {
       const stocks = producto.variantes
-        .map((vari) => normalizarNumero(vari.stock))
+        .map((vari) => obtenerStockControlado(vari.stock))
         .filter((stock) => stock !== null);
       if (stocks.length === 0) return null;
       return stocks.reduce((acc, val) => acc + val, 0);
     }
 
-    return normalizarNumero(producto?.stock);
+    return obtenerStockControlado(producto?.stock);
   };
 
   const ordenarProductosPorCategorias = (prods, cats) => {
@@ -227,12 +236,9 @@ export default function POS() {
 
   const handleAgregar = (producto) => {
     if (tieneVariantes(producto)) {
-      const variantesConStock = producto.variantes.filter((v) => {
-        const stockVar = normalizarNumero(v.stock);
-        return stockVar === null || stockVar > 0;
-      });
+      const variantesConStock = producto.variantes.filter((v) => varianteDisponible(v));
       if (variantesConStock.length === 0) {
-        alert('Todas las variantes de este producto están sin stock.');
+        alert('Todas las variantes de este producto están agotadas.');
         return;
       }
       setProductoConVariantes({ ...producto, variantes: variantesConStock });
@@ -449,7 +455,9 @@ export default function POS() {
         {productosFiltrados.map((prod) => {
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
-          const agotado = mostrarStock ? stockTotal === 0 : false;
+          const agotado = tieneVariantes(prod)
+            ? prod.variantes.every((vari) => varianteEstaAgotada(vari))
+            : (mostrarStock ? stockTotal === 0 : false);
           const stockBajo =
             mostrarStock && !agotado && stockTotal <= MIN_STOCK_ALERT;
 
@@ -695,9 +703,12 @@ export default function POS() {
                 {hayVariantes && (
                   <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                     {resumenVariantes.map((vari) => {
-                      const variStock = normalizarNumero(vari.stock);
-                      const stockLabel =
-                        variStock === null ? '∞' : variStock;
+                      const variStock = obtenerStockControlado(vari.stock);
+                      const stockLabel = varianteEstaAgotada(vari)
+                        ? 'AGOTADO'
+                        : variStock === null
+                          ? '∞'
+                          : variStock;
                       return (
                         <Typography
                           key={`${prod._id}-${vari._id || vari.nombre}`}

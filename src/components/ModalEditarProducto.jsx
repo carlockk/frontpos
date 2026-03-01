@@ -72,7 +72,8 @@ export default function ModalEditarProducto({ open, onClose, producto, onActuali
           talla: v.talla || '',
           sku: v.sku || '',
           precio: v.precio === 0 || v.precio ? String(v.precio) : '',
-          stock: v.stock === 0 || v.stock ? String(v.stock) : ''
+          stock: Number(v.stock) > 0 ? String(v.stock) : '',
+          agotado: Boolean(v.agotado)
         }))
       );
       const preseleccion = (producto.agregados || [])
