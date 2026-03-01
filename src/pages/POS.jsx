@@ -69,7 +69,16 @@ const getCategoriaId = (producto) => {
   if (!raw) return '';
   if (typeof raw === 'string') return raw;
   if (typeof raw === 'object' && raw._id) return String(raw._id);
+  if (typeof raw === 'object' && raw.id) return String(raw.id);
   return '';
+};
+
+const getCategoriaTitulo = (producto) => {
+  const raw = producto?.categoria;
+  if (!raw) return 'Sin categoria';
+  if (typeof raw === 'string') return 'Sin categoria';
+  const titulo = raw?.label || raw?.nombre || '';
+  return String(titulo || '').trim() || 'Sin categoria';
 };
 
 export default function POS() {
@@ -355,11 +364,23 @@ export default function POS() {
       titulo: 'Sin categoria',
       productos: []
     };
+    const gruposExtraMap = new Map();
 
     productosFiltrados.forEach((prod) => {
       const catId = getCategoriaId(prod);
       if (catId && gruposMap.has(String(catId))) {
         gruposMap.get(String(catId)).productos.push(prod);
+      } else if (catId || (prod?.categoria && typeof prod.categoria === 'object')) {
+        const titulo = getCategoriaTitulo(prod);
+        const extraKey = `extra:${catId || titulo.toLowerCase()}`;
+        if (!gruposExtraMap.has(extraKey)) {
+          gruposExtraMap.set(extraKey, {
+            key: extraKey,
+            titulo,
+            productos: []
+          });
+        }
+        gruposExtraMap.get(extraKey).productos.push(prod);
       } else {
         sinCategoria.productos.push(prod);
       }
@@ -372,6 +393,10 @@ export default function POS() {
     if (sinCategoria.productos.length > 0) {
       grupos.push(sinCategoria);
     }
+
+    gruposExtraMap.forEach((grupo) => {
+      if (grupo.productos.length > 0) grupos.push(grupo);
+    });
 
     return grupos;
   }, [categorias, productosFiltrados]);
