@@ -75,6 +75,7 @@ export default function POS() {
   const [openCrear, setOpenCrear] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [ordenAnimKey, setOrdenAnimKey] = useState(0);
   const [productoConVariantes, setProductoConVariantes] = useState(null);
   const [productoConAgregados, setProductoConAgregados] = useState(null);
 
@@ -199,10 +200,14 @@ export default function POS() {
     cargarDatos();
 
     const handler = (e) => {
-      if (e.key === `ordenCategorias_${userKey}`) cargarDatos();
+      if (e.key === `ordenCategorias_${userKey}`) {
+        setOrdenAnimKey((prev) => prev + 1);
+        cargarDatos();
+      }
     };
     const localHandler = (e) => {
       if (e?.detail?.key === `ordenCategorias_${userKey}`) {
+        setOrdenAnimKey((prev) => prev + 1);
         cargarDatos();
       }
     };
@@ -307,6 +312,7 @@ export default function POS() {
     const storageKey = `ordenCategorias_${userKey}`;
     localStorage.setItem(storageKey, JSON.stringify(items.map((c) => c._id)));
     window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
+    setOrdenAnimKey((prev) => prev + 1);
     setSnackbarOpen(true);
   };
 
@@ -314,6 +320,7 @@ export default function POS() {
     const storageKey = `ordenCategorias_${userKey}`;
     localStorage.removeItem(storageKey);
     window.dispatchEvent(new CustomEvent(CATEGORY_ORDER_EVENT, { detail: { key: storageKey } }));
+    setOrdenAnimKey((prev) => prev + 1);
     cargarDatos();
   };
 
@@ -344,32 +351,30 @@ export default function POS() {
   const obtenerTituloCategoria = (producto) =>
     producto?.categoria?.label || producto?.categoria?.nombre || 'Sin categoria';
 
-  const productosAgrupados = (() => {
-    const grupos = [];
-    const usados = new Set();
+  const obtenerClaveCategoria = (producto) => {
+    if (producto?.categoria?._id) return `id:${producto.categoria._id}`;
+    const nombre = String(producto?.categoria?.nombre || 'Sin categoria').trim().toLowerCase();
+    return `name:${nombre || 'sin categoria'}`;
+  };
 
-    categorias.forEach((cat) => {
-      const items = productosFiltrados.filter((prod) => prod?.categoria?._id === cat._id);
-      if (items.length === 0) return;
-      items.forEach((prod) => usados.add(prod._id));
-      grupos.push({
-        id: cat._id,
-        titulo: cat.label || cat.nombre || 'Sin categoria',
-        productos: items
-      });
+  const ordenCategoriaMap = useMemo(() => {
+    const map = new Map();
+    categorias.forEach((cat, index) => {
+      map.set(String(cat._id), index);
     });
+    return map;
+  }, [categorias]);
 
-    const sinCategoria = productosFiltrados.filter((prod) => !usados.has(prod._id));
-    if (sinCategoria.length > 0) {
-      grupos.push({
-        id: 'sin-categoria',
-        titulo: obtenerTituloCategoria(sinCategoria[0]),
-        productos: sinCategoria
-      });
-    }
-
-    return grupos;
-  })();
+  const productosFiltradosOrdenados = useMemo(() => {
+    return [...productosFiltrados].sort((a, b) => {
+      const aId = a?.categoria?._id ? String(a.categoria._id) : null;
+      const bId = b?.categoria?._id ? String(b.categoria._id) : null;
+      const aOrden = aId && ordenCategoriaMap.has(aId) ? ordenCategoriaMap.get(aId) : Number.MAX_SAFE_INTEGER;
+      const bOrden = bId && ordenCategoriaMap.has(bId) ? ordenCategoriaMap.get(bId) : Number.MAX_SAFE_INTEGER;
+      if (aOrden !== bOrden) return aOrden - bOrden;
+      return String(a?.nombre || '').localeCompare(String(b?.nombre || ''), 'es');
+    });
+  }, [productosFiltrados, ordenCategoriaMap]);
 
   if (!cajaVerificada) {
     return (
@@ -483,6 +488,14 @@ export default function POS() {
       {/* Grid de productos */}
       <Box
         sx={{
+          '@keyframes posTitleIn': {
+            '0%': { opacity: 0, transform: 'translateY(6px)' },
+            '100%': { opacity: 1, transform: 'translateY(0)' }
+          },
+          '@keyframes posCardIn': {
+            '0%': { opacity: 0.75, transform: 'translateY(8px) scale(0.99)' },
+            '100%': { opacity: 1, transform: 'translateY(0) scale(1)' }
+          },
           display: 'grid',
           gridTemplateColumns:
             'repeat(auto-fill, minmax(180px, 1fr))',
@@ -490,9 +503,10 @@ export default function POS() {
           alignItems: 'stretch'
         }}
       >
-        {productosAgrupados.flatMap((grupo, groupIndex) =>
-          grupo.productos.map((prod, productIndex) => {
-            const mostrarTituloCategoria = productIndex === 0;
+        {productosFiltradosOrdenados.map((prod, index) => {
+          const claveActual = obtenerClaveCategoria(prod);
+          const claveAnterior = index > 0 ? obtenerClaveCategoria(productosFiltradosOrdenados[index - 1]) : null;
+          const mostrarTituloCategoria = index === 0 || claveActual !== claveAnterior;
           const stockTotal = obtenerStockTotal(prod);
           const mostrarStock = stockTotal !== null;
           const agotado = tieneVariantes(prod)
@@ -517,7 +531,8 @@ export default function POS() {
                 <Box
                   sx={{
                     gridColumn: '1 / -1',
-                    mt: groupIndex === 0 ? 0 : 1.5
+                    mt: index === 0 ? 0 : 1.5,
+                    animation: ordenAnimKey ? 'posTitleIn 260ms ease both' : 'none'
                   }}
                 >
                   <Typography
@@ -528,7 +543,7 @@ export default function POS() {
                       color: titleColor
                     }}
                   >
-                    {grupo.titulo}
+                    {obtenerTituloCategoria(prod)}
                   </Typography>
                 </Box>
               )}
@@ -545,6 +560,8 @@ export default function POS() {
                   minHeight: 280,
                   transition:
                     'transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease',
+                  animation: ordenAnimKey ? 'posCardIn 280ms ease both' : 'none',
+                  animationDelay: ordenAnimKey ? `${Math.min(index * 18, 220)}ms` : '0ms',
                   '&:hover': {
                     transform: 'translateY(-4px)',
                     borderColor: theme.palette.primary.main,
@@ -822,8 +839,7 @@ export default function POS() {
               </Box>
             </Fragment>
           );
-          })
-        )}
+        })}
       </Box>
 
       {/* Botón flotante derecho */}
