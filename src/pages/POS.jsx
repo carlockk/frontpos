@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -64,6 +64,14 @@ const buildCategoryLabelMap = (items) => {
   }));
 };
 
+const getCategoriaId = (producto) => {
+  const raw = producto?.categoria;
+  if (!raw) return '';
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object' && raw._id) return String(raw._id);
+  return '';
+};
+
 export default function POS() {
   const { selectedLocal } = useAuth();
   const [productos, setProductos] = useState([]);
@@ -109,7 +117,6 @@ export default function POS() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const userId = user?.id || user?._id || 'anonimo';
   const userKey = `${userId}_${selectedLocal?._id || 'sin-local'}`;
-  const [productosOrdenados, setProductosOrdenados] = useState([]);
 
   const tieneVariantes = (producto) =>
     Array.isArray(producto?.variantes) &&
@@ -155,7 +162,7 @@ export default function POS() {
 
     orden.forEach((catId) => {
       prods
-        .filter((p) => p.categoria?._id === catId)
+        .filter((p) => getCategoriaId(p) === String(catId))
         .forEach((p) => {
           ordenados.push(p);
           usados.add(p._id);
@@ -193,9 +200,6 @@ export default function POS() {
 
     setProductos(resProd.data);
     setCategorias(categoriasOrdenadas);
-    setProductosOrdenados(
-      ordenarProductosPorCategorias(resProd.data, categoriasOrdenadas)
-    );
   };
 
   useEffect(() => {
@@ -297,9 +301,6 @@ export default function POS() {
       `ordenCategorias_${userKey}`,
       JSON.stringify(items.map((c) => c._id))
     );
-    setProductosOrdenados(
-      ordenarProductosPorCategorias(productos, items)
-    );
     setSnackbarOpen(true);
   };
 
@@ -309,6 +310,11 @@ export default function POS() {
   };
 
   const busquedaLower = busqueda.trim().toLowerCase();
+
+  const productosOrdenados = useMemo(
+    () => ordenarProductosPorCategorias(productos, categorias),
+    [productos, categorias]
+  );
 
   const productosFiltrados = productosOrdenados.filter((prod) => {
     const coincideNombre = (prod.nombre || '')
@@ -323,7 +329,7 @@ export default function POS() {
       : false;
 
     const coincideCategoria = filtroCategoria
-      ? prod.categoria?._id === filtroCategoria
+      ? getCategoriaId(prod) === String(filtroCategoria)
       : true;
 
     const pasaBusqueda =
@@ -331,6 +337,44 @@ export default function POS() {
 
     return pasaBusqueda && coincideCategoria;
   });
+
+  const productosAgrupados = useMemo(() => {
+    const gruposMap = new Map(
+      categorias.map((cat) => [
+        String(cat._id),
+        {
+          key: String(cat._id),
+          titulo: cat.label || cat.nombre || 'Sin categoria',
+          productos: []
+        }
+      ])
+    );
+
+    const sinCategoria = {
+      key: 'sin-categoria',
+      titulo: 'Sin categoria',
+      productos: []
+    };
+
+    productosFiltrados.forEach((prod) => {
+      const catId = getCategoriaId(prod);
+      if (catId && gruposMap.has(String(catId))) {
+        gruposMap.get(String(catId)).productos.push(prod);
+      } else {
+        sinCategoria.productos.push(prod);
+      }
+    });
+
+    const grupos = categorias
+      .map((cat) => gruposMap.get(String(cat._id)))
+      .filter((g) => g && g.productos.length > 0);
+
+    if (sinCategoria.productos.length > 0) {
+      grupos.push(sinCategoria);
+    }
+
+    return grupos;
+  }, [categorias, productosFiltrados]);
 
   if (!cajaVerificada) {
     return (
@@ -451,28 +495,38 @@ export default function POS() {
           alignItems: 'stretch'
         }}
       >
-        {productosFiltrados.map((prod) => {
-          const stockTotal = obtenerStockTotal(prod);
-          const mostrarStock = stockTotal !== null;
-          const agotado = tieneVariantes(prod)
-            ? prod.variantes.every((vari) => varianteEstaAgotada(vari))
-            : (mostrarStock ? stockTotal === 0 : false);
-          const stockBajo =
-            mostrarStock && !agotado && stockTotal <= MIN_STOCK_ALERT;
+        {productosAgrupados.map((grupo) => (
+          <Fragment key={grupo.key}>
+            <Box sx={{ gridColumn: '1 / -1', mt: 0.5 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 800, letterSpacing: 0.4, color: titleColor }}
+              >
+                {grupo.titulo}
+              </Typography>
+            </Box>
+            {grupo.productos.map((prod) => {
+              const stockTotal = obtenerStockTotal(prod);
+              const mostrarStock = stockTotal !== null;
+              const agotado = tieneVariantes(prod)
+                ? prod.variantes.every((vari) => varianteEstaAgotada(vari))
+                : (mostrarStock ? stockTotal === 0 : false);
+              const stockBajo =
+                mostrarStock && !agotado && stockTotal <= MIN_STOCK_ALERT;
 
-          const resumenVariantes = tieneVariantes(prod)
-            ? prod.variantes.slice(0, 2)
-            : [];
+              const resumenVariantes = tieneVariantes(prod)
+                ? prod.variantes.slice(0, 2)
+                : [];
 
-          const imagenSrc = prod.imagen_url?.startsWith('/uploads')
-            ? `${BASE_URL}${prod.imagen_url}`
-            : prod.imagen_url || '';
+              const imagenSrc = prod.imagen_url?.startsWith('/uploads')
+                ? `${BASE_URL}${prod.imagen_url}`
+                : prod.imagen_url || '';
 
-          const hayVariantes = tieneVariantes(prod);
+              const hayVariantes = tieneVariantes(prod);
 
-          return (
-            <Box
-              key={prod._id}
+              return (
+                <Box
+                  key={prod._id}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -760,8 +814,10 @@ export default function POS() {
                 {hayVariantes ? 'Elegir variante' : 'Agregar'}
               </Button>
             </Box>
-          );
-        })}
+              );
+            })}
+          </Fragment>
+        ))}
       </Box>
 
       {/* Botón flotante derecho */}
