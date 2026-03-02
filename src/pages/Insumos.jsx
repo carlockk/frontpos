@@ -75,9 +75,10 @@ const estadoVencimiento = (lote, alertaDias) => {
 
 export default function Insumos() {
   const { usuario, selectedLocal } = useAuth();
-  const isAdmin = usuario?.rol === 'admin' || usuario?.rol === 'superadmin';
-  const isSuperadmin = usuario?.rol === 'superadmin';
-  const puedeEditar = isAdmin || usuario?.rol === 'cajero';
+  const userRole = String(usuario?.rol || '').trim().toLowerCase();
+  const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+  const isSuperadmin = userRole === 'superadmin';
+  const puedeEditar = isAdmin || userRole === 'cajero';
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -127,44 +128,82 @@ export default function Insumos() {
   const [ordenarTabs, setOrdenarTabs] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
   const [descTexto, setDescTexto] = useState('');
+  const [obsOpen, setObsOpen] = useState(false);
+  const [obsTexto, setObsTexto] = useState('');
+  const [obsTarget, setObsTarget] = useState(null);
+  const [obsSaving, setObsSaving] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
   const tableContainerRef = useRef(null);
+  const fetchInsumosSeqRef = useRef(0);
+  const fetchCategoriasSeqRef = useRef(0);
 
 
   const fetchInsumos = async () => {
+    const localId = selectedLocal?._id || null;
+    if (isSuperadmin && !localId) {
+      setInsumos([]);
+      setLoading(false);
+      return;
+    }
+
+    const requestSeq = ++fetchInsumosSeqRef.current;
     setLoading(true);
     setError('');
     try {
       const res = await obtenerInsumos({
         incluir_ocultos: mostrarInsumosOcultos ? 'true' : 'false'
       });
+      if (requestSeq !== fetchInsumosSeqRef.current) return;
       setInsumos(res.data || []);
     } catch (err) {
+      if (requestSeq !== fetchInsumosSeqRef.current) return;
       setError('No se pudieron cargar los insumos.');
     } finally {
-      setLoading(false);
+      if (requestSeq === fetchInsumosSeqRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchInsumos();
-  }, [selectedLocal?._id, mostrarInsumosOcultos]);
+  }, [selectedLocal?._id, mostrarInsumosOcultos, isSuperadmin]);
 
   useEffect(() => {
     const cargarCategorias = async () => {
+      const localId = selectedLocal?._id || null;
+      if (isSuperadmin && !localId) {
+        setCategoriasInsumo([]);
+        return;
+      }
+
+      const requestSeq = ++fetchCategoriasSeqRef.current;
       try {
         const res = await obtenerCategoriasInsumo();
+        if (requestSeq !== fetchCategoriasSeqRef.current) return;
         setCategoriasInsumo(res.data || []);
       } catch {
+        if (requestSeq !== fetchCategoriasSeqRef.current) return;
         setCategoriasInsumo([]);
       }
     };
     cargarCategorias();
+  }, [selectedLocal?._id, isSuperadmin]);
+
+  useEffect(() => {
+    setTabCategoria('todas');
+    setOrdenarTabs(false);
+    setDialogOpen(false);
+    setCategoriaDialogOpen(false);
+    setObsOpen(false);
+    setObsTarget(null);
+    setObsTexto('');
+    setVisibleCount(50);
   }, [selectedLocal?._id]);
 
   useEffect(() => {
     const cargarLocales = async () => {
-      if (usuario?.rol !== 'superadmin') return;
+      if (userRole !== 'superadmin') return;
       try {
         const res = await obtenerLocales();
         setCloneLocales(res.data || []);
@@ -173,7 +212,7 @@ export default function Insumos() {
       }
     };
     cargarLocales();
-  }, [usuario?.rol]);
+  }, [userRole]);
 
   const handleOcultarInsumo = async (insumoId, activo) => {
     try {
@@ -194,6 +233,42 @@ export default function Insumos() {
       fetchInsumos();
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo eliminar la nota.');
+    }
+  };
+
+  const openObsDialog = (insumo) => {
+    setObsTarget(insumo || null);
+    setObsTexto(String(insumo?.ultima_nota || ''));
+    setObsOpen(true);
+    setError('');
+    setInfo('');
+  };
+
+  const handleGuardarObs = async () => {
+    if (!isAdmin || !obsTarget?._id) {
+      setObsOpen(false);
+      return;
+    }
+
+    try {
+      setObsSaving(true);
+      const nota = String(obsTexto || '').trim();
+      await actualizarNotaInsumo(obsTarget._id, { nota });
+      setInsumos((prev) =>
+        prev.map((item) =>
+          item._id === obsTarget._id
+            ? { ...item, ultima_nota: nota || null }
+            : item
+        )
+      );
+      setInfo(nota ? 'Observacion guardada.' : 'Observacion eliminada.');
+      setObsOpen(false);
+      setObsTarget(null);
+      setObsTexto('');
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo guardar la observacion.');
+    } finally {
+      setObsSaving(false);
     }
   };
 
@@ -529,7 +604,7 @@ export default function Insumos() {
               <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
                 Crear insumo
               </Button>
-              {usuario?.rol === 'superadmin' && (
+              {isSuperadmin && (
                 <>
                   <Button
                     variant="text"
@@ -740,6 +815,7 @@ export default function Insumos() {
                   <TableCell>Stock</TableCell>
                   <TableCell>Minimo</TableCell>
                   <TableCell>Vencimiento</TableCell>
+                  <TableCell>Obs.</TableCell>
                   <TableCell sx={{ fontSize: '0.75rem' }}>Ingresos/Egresos</TableCell>
                   <TableCell align="right" sx={{ fontSize: '0.75rem' }}>Acciones</TableCell>
                 </TableRow>
@@ -749,7 +825,7 @@ export default function Insumos() {
                   <TableBody ref={provided.innerRef} {...provided.droppableProps}>
                     {insumosFiltrados.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} align="center">
+                        <TableCell colSpan={10} align="center">
                           No hay insumos registrados.
                         </TableCell>
                       </TableRow>
@@ -855,6 +931,19 @@ export default function Insumos() {
                                   </Button>
                                 </TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                                  {(isAdmin || String(insumo.ultima_nota || '').trim()) ? (
+                                    <Button
+                                      size="small"
+                                      onClick={() => openObsDialog(insumo)}
+                                      sx={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem', minWidth: 'auto', px: 0.5 }}
+                                    >
+                                      {String(insumo.ultima_nota || '').trim() ? 'Ver' : 'Agregar'}
+                                    </Button>
+                                  ) : (
+                                    <Typography variant="caption" color="text.secondary">-</Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell sx={{ whiteSpace: 'nowrap' }}>
                                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'nowrap' }}>
                                     <Button
                                       size="small"
@@ -894,7 +983,7 @@ export default function Insumos() {
                                         </IconButton>
                                       </Tooltip>
                                     )}
-                                    {usuario?.rol === 'superadmin' && !oculto && (
+                                    {isSuperadmin && !oculto && (
                                       <Tooltip title="Clonar" arrow>
                                         <IconButton
                                           size="small"
@@ -1065,6 +1154,48 @@ export default function Insumos() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDescOpen(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={obsOpen}
+        onClose={() => {
+          if (obsSaving) return;
+          setObsOpen(false);
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Observacion</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            {obsTarget?.nombre || '-'}
+          </Typography>
+          <TextField
+            label="Observacion"
+            value={obsTexto}
+            onChange={(e) => setObsTexto(e.target.value)}
+            fullWidth
+            multiline
+            minRows={4}
+            disabled={!isAdmin || obsSaving}
+            placeholder={isAdmin ? 'Escribe una observacion para este insumo' : ''}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              if (obsSaving) return;
+              setObsOpen(false);
+            }}
+          >
+            Cerrar
+          </Button>
+          {isAdmin && (
+            <Button variant="contained" onClick={handleGuardarObs} disabled={obsSaving}>
+              {obsSaving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 
