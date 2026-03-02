@@ -887,7 +887,7 @@ export default function Insumos() {
                   <TableCell>Nombre</TableCell>
                   <TableCell>Descripcion</TableCell>
                   <TableCell>Unidad</TableCell>
-                  <TableCell>Stock</TableCell>
+                  <TableCell sx={{ width: 74, whiteSpace: 'nowrap' }}>Stock</TableCell>
                   <TableCell>Minimo</TableCell>
                   <TableCell>Vencimiento</TableCell>
                   <TableCell>Obs.</TableCell>
@@ -984,7 +984,7 @@ export default function Insumos() {
                                   </Tooltip>
                                 </TableCell>
                                 <TableCell>{insumo.unidad}</TableCell>
-                                <TableCell>
+                                <TableCell sx={{ width: 74, whiteSpace: 'nowrap' }}>
                                   <Chip
                                     size="small"
                                     color={stockBajo ? 'warning' : 'success'}
