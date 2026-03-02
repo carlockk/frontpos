@@ -887,7 +887,7 @@ export default function Insumos() {
                   <TableCell>Nombre</TableCell>
                   <TableCell>Descripcion</TableCell>
                   <TableCell>Unidad</TableCell>
-                  <TableCell sx={{ width: 74, whiteSpace: 'nowrap' }}>Stock</TableCell>
+                  <TableCell sx={{ width: 74, minWidth: 74, maxWidth: 74, whiteSpace: 'nowrap' }}>Stock</TableCell>
                   <TableCell>Minimo</TableCell>
                   <TableCell>Vencimiento</TableCell>
                   <TableCell>Obs.</TableCell>
@@ -939,6 +939,9 @@ export default function Insumos() {
                                 <TableCell>
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="body2">{insumo.nombre}</Typography>
+                                    {/*
+                                      Nota/observacion junto al nombre (temporalmente oculto).
+                                      Se mantiene comentado para reutilizarlo despues si vuelve a ser necesario.
                                     {insumo.ultima_nota && (
                                       <>
                                         <Tooltip title={insumo.ultima_nota} arrow disableHoverListener={isMobile}>
@@ -965,6 +968,7 @@ export default function Insumos() {
                                         )}
                                       </>
                                     )}
+                                    */}
                                   </Stack>
                                 </TableCell>
                                 <TableCell>
@@ -984,20 +988,18 @@ export default function Insumos() {
                                   </Tooltip>
                                 </TableCell>
                                 <TableCell>{insumo.unidad}</TableCell>
-                                <TableCell sx={{ width: 74, whiteSpace: 'nowrap' }}>
+                                <TableCell sx={{ width: 74, minWidth: 74, maxWidth: 74, whiteSpace: 'nowrap' }}>
                                   <Chip
                                     size="small"
                                     color={stockBajo ? 'warning' : 'success'}
                                     label={Number(insumo.stock_total || 0)}
+                                    sx={{
+                                      minWidth: 42,
+                                      '& .MuiChip-label': {
+                                        px: 0.75
+                                      }
+                                    }}
                                   />
-                                  {oculto && (
-                                    <Chip
-                                      size="small"
-                                      color="default"
-                                      label="Oculto"
-                                      sx={{ ml: 1 }}
-                                    />
-                                  )}
                                 </TableCell>
                                 <TableCell>{Number(insumo.stock_minimo || 0)}</TableCell>
                                 <TableCell>
