@@ -243,6 +243,12 @@ export const editarInsumo = (id, data) => API.put(`/insumos/${id}`, data);
 export const eliminarInsumo = (id) => API.delete(`/insumos/${id}`);
 export const actualizarEstadoInsumo = (id, data) => API.put(`/insumos/${id}/estado`, data);
 export const actualizarNotaInsumo = (id, data) => API.put(`/insumos/${id}/nota`, data);
+export const obtenerObservacionesInsumo = (id) => API.get(`/insumos/${id}/observaciones`);
+export const crearObservacionInsumo = (id, data) => API.post(`/insumos/${id}/observaciones`, data);
+export const editarObservacionInsumo = (id, obsId, data) =>
+  API.put(`/insumos/${id}/observaciones/${obsId}`, data);
+export const eliminarObservacionInsumo = (id, obsId) =>
+  API.delete(`/insumos/${id}/observaciones/${obsId}`);
 export const clonarInsumos = (data) => API.post('/insumos/clonar', data);
 export const actualizarOrdenInsumos = (data) => API.put('/insumos/orden', data);
 export const obtenerCategoriasInsumo = () => API.get('/insumo-categorias');

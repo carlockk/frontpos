@@ -47,6 +47,10 @@ import {
   eliminarInsumo,
   actualizarEstadoInsumo,
   actualizarNotaInsumo,
+  obtenerObservacionesInsumo,
+  crearObservacionInsumo,
+  editarObservacionInsumo,
+  eliminarObservacionInsumo,
   obtenerLocales,
   obtenerUsuarios,
   obtenerMovimientosInsumo,
@@ -129,8 +133,11 @@ export default function Insumos() {
   const [descOpen, setDescOpen] = useState(false);
   const [descTexto, setDescTexto] = useState('');
   const [obsOpen, setObsOpen] = useState(false);
-  const [obsTexto, setObsTexto] = useState('');
   const [obsTarget, setObsTarget] = useState(null);
+  const [obsList, setObsList] = useState([]);
+  const [obsLoading, setObsLoading] = useState(false);
+  const [obsEditId, setObsEditId] = useState(null);
+  const [obsInput, setObsInput] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
   const [visibleCount, setVisibleCount] = useState(50);
   const tableContainerRef = useRef(null);
@@ -197,7 +204,9 @@ export default function Insumos() {
     setCategoriaDialogOpen(false);
     setObsOpen(false);
     setObsTarget(null);
-    setObsTexto('');
+    setObsList([]);
+    setObsEditId(null);
+    setObsInput('');
     setVisibleCount(50);
   }, [selectedLocal?._id]);
 
@@ -224,7 +233,7 @@ export default function Insumos() {
   };
 
   const handleLimpiarNota = async (insumoId) => {
-    if (!isAdmin) return;
+    if (!puedeEditar) return;
     const confirmar = window.confirm('Seguro que deseas borrar la nota rápida de este insumo?');
     if (!confirmar) return;
     try {
@@ -236,37 +245,103 @@ export default function Insumos() {
     }
   };
 
-  const openObsDialog = (insumo) => {
-    setObsTarget(insumo || null);
-    setObsTexto(String(insumo?.ultima_nota || ''));
+  const puedeGestionarObs = puedeEditar;
+
+  const syncObsResumenInsumo = (insumoId, observaciones = []) => {
+    const ordenadas = [...(observaciones || [])].sort(
+      (a, b) => new Date(b.actualizado_en || b.creado_en || 0) - new Date(a.actualizado_en || a.creado_en || 0)
+    );
+    const ultima = ordenadas[0]?.texto ? String(ordenadas[0].texto).trim() : '';
+
+    setInsumos((prev) =>
+      prev.map((item) =>
+        item._id === insumoId
+          ? { ...item, ultima_nota: ultima || null }
+          : item
+      )
+    );
+  };
+
+  const cargarObservaciones = async (insumoId) => {
+    setObsLoading(true);
+    try {
+      const res = await obtenerObservacionesInsumo(insumoId);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setObsList(list);
+      syncObsResumenInsumo(insumoId, list);
+    } catch (err) {
+      setObsList([]);
+      setError(err?.response?.data?.error || 'No se pudieron cargar las observaciones.');
+    } finally {
+      setObsLoading(false);
+    }
+  };
+
+  const openObsDialog = async (insumo) => {
+    if (!insumo?._id) return;
+    setObsTarget(insumo);
     setObsOpen(true);
+    setObsList([]);
+    setObsEditId(null);
+    setObsInput('');
     setError('');
     setInfo('');
+    await cargarObservaciones(insumo._id);
+  };
+
+  const handleStartEditObs = (obs) => {
+    if (!puedeGestionarObs) return;
+    setObsEditId(String(obs?._id || ''));
+    setObsInput(String(obs?.texto || ''));
+  };
+
+  const handleCancelEditObs = () => {
+    setObsEditId(null);
+    setObsInput('');
   };
 
   const handleGuardarObs = async () => {
-    if (!isAdmin || !obsTarget?._id) {
-      setObsOpen(false);
+    if (!puedeGestionarObs || !obsTarget?._id) return;
+    const texto = String(obsInput || '').trim();
+    if (!texto) {
+      setError('La observacion no puede estar vacia.');
       return;
     }
 
     try {
       setObsSaving(true);
-      const nota = String(obsTexto || '').trim();
-      await actualizarNotaInsumo(obsTarget._id, { nota });
-      setInsumos((prev) =>
-        prev.map((item) =>
-          item._id === obsTarget._id
-            ? { ...item, ultima_nota: nota || null }
-            : item
-        )
-      );
-      setInfo(nota ? 'Observacion guardada.' : 'Observacion eliminada.');
-      setObsOpen(false);
-      setObsTarget(null);
-      setObsTexto('');
+      if (obsEditId) {
+        await editarObservacionInsumo(obsTarget._id, obsEditId, { texto });
+        setInfo('Observacion actualizada.');
+      } else {
+        await crearObservacionInsumo(obsTarget._id, { texto });
+        setInfo('Observacion creada.');
+      }
+      setObsEditId(null);
+      setObsInput('');
+      await cargarObservaciones(obsTarget._id);
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo guardar la observacion.');
+    } finally {
+      setObsSaving(false);
+    }
+  };
+
+  const handleEliminarObs = async (obs) => {
+    if (!puedeGestionarObs || !obsTarget?._id || !obs?._id) return;
+    const confirmar = window.confirm('Seguro que deseas eliminar esta observacion?');
+    if (!confirmar) return;
+
+    try {
+      setObsSaving(true);
+      await eliminarObservacionInsumo(obsTarget._id, obs._id);
+      if (String(obsEditId || '') === String(obs._id)) {
+        handleCancelEditObs();
+      }
+      setInfo('Observacion eliminada.');
+      await cargarObservaciones(obsTarget._id);
+    } catch (err) {
+      setError(err?.response?.data?.error || 'No se pudo eliminar la observacion.');
     } finally {
       setObsSaving(false);
     }
@@ -878,7 +953,7 @@ export default function Insumos() {
                                             <InfoIcon fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
-                                        {isAdmin && (
+                                        {puedeGestionarObs && (
                                           <Tooltip title="Borrar nota" arrow>
                                             <IconButton
                                               size="small"
@@ -931,7 +1006,7 @@ export default function Insumos() {
                                   </Button>
                                 </TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                                  {(isAdmin || String(insumo.ultima_nota || '').trim()) ? (
+                                  {(puedeGestionarObs || String(insumo.ultima_nota || '').trim()) ? (
                                     <Button
                                       size="small"
                                       onClick={() => openObsDialog(insumo)}
@@ -1171,16 +1246,86 @@ export default function Insumos() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
             {obsTarget?.nombre || '-'}
           </Typography>
-          <TextField
-            label="Observacion"
-            value={obsTexto}
-            onChange={(e) => setObsTexto(e.target.value)}
-            fullWidth
-            multiline
-            minRows={4}
-            disabled={!isAdmin || obsSaving}
-            placeholder={isAdmin ? 'Escribe una observacion para este insumo' : ''}
-          />
+
+          {obsLoading ? (
+            <Typography color="text.secondary">Cargando observaciones...</Typography>
+          ) : (
+            <Stack spacing={1.25} sx={{ mb: 2.5 }}>
+              {obsList.length === 0 ? (
+                <Typography color="text.secondary">Sin observaciones.</Typography>
+              ) : (
+                obsList.map((obs) => {
+                  const fecha = obs?.actualizado_en || obs?.creado_en;
+                  return (
+                    <Box
+                      key={obs._id}
+                      sx={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 1,
+                        p: 1.2,
+                        bgcolor: '#fafafa'
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {obs?.texto || '-'}
+                      </Typography>
+                      <Stack direction="row" spacing={1} justifyContent="space-between" alignItems="center" sx={{ mt: 0.75 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {fecha ? new Date(fecha).toLocaleString() : ''}
+                        </Typography>
+                        {puedeGestionarObs && (
+                          <Stack direction="row" spacing={0.5}>
+                            <Button
+                              size="small"
+                              onClick={() => handleStartEditObs(obs)}
+                              disabled={obsSaving}
+                              sx={{ minWidth: 'auto', px: 0.75, fontSize: '0.72rem' }}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="small"
+                              color="error"
+                              onClick={() => handleEliminarObs(obs)}
+                              disabled={obsSaving}
+                              sx={{ minWidth: 'auto', px: 0.75, fontSize: '0.72rem' }}
+                            >
+                              Eliminar
+                            </Button>
+                          </Stack>
+                        )}
+                      </Stack>
+                    </Box>
+                  );
+                })
+              )}
+            </Stack>
+          )}
+
+          {puedeGestionarObs && (
+            <Stack spacing={1}>
+              <TextField
+                label={obsEditId ? 'Editar observacion' : 'Nueva observacion'}
+                value={obsInput}
+                onChange={(e) => setObsInput(e.target.value)}
+                fullWidth
+                multiline
+                minRows={3}
+                disabled={obsSaving}
+                placeholder="Escribe una observacion para este insumo"
+              />
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                {obsEditId && (
+                  <Button onClick={handleCancelEditObs} disabled={obsSaving}>
+                    Cancelar edicion
+                  </Button>
+                )}
+                <Button variant="contained" onClick={handleGuardarObs} disabled={obsSaving}>
+                  {obsSaving ? 'Guardando...' : (obsEditId ? 'Guardar cambios' : 'Agregar observacion')}
+                </Button>
+              </Stack>
+            </Stack>
+          )}
         </DialogContent>
         <DialogActions>
           <Button
@@ -1191,11 +1336,6 @@ export default function Insumos() {
           >
             Cerrar
           </Button>
-          {isAdmin && (
-            <Button variant="contained" onClick={handleGuardarObs} disabled={obsSaving}>
-              {obsSaving ? 'Guardando...' : 'Guardar'}
-            </Button>
-          )}
         </DialogActions>
       </Dialog>
 
