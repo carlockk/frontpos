@@ -42,6 +42,15 @@ import SelectorAgregadosDialog from '../components/SelectorAgregadosDialog';
 // ✅ Ahora usamos la base de archivos que sale de api.js
 const BASE_URL = FILES_BASE || (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000');
 const MIN_STOCK_ALERT = 3;
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+const normalizeCategoryKey = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
 
 const buildCategoryLabelMap = (items) => {
   const byId = new Map(items.map((cat) => [cat._id, cat]));
@@ -67,7 +76,10 @@ const buildCategoryLabelMap = (items) => {
 const getCategoriaId = (producto) => {
   const raw = producto?.categoria;
   if (!raw) return '';
-  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'string') {
+    const value = raw.trim();
+    return OBJECT_ID_REGEX.test(value) ? value : '';
+  }
   if (typeof raw === 'object' && raw._id) return String(raw._id);
   if (typeof raw === 'object' && raw.id) return String(raw.id);
   return '';
@@ -76,9 +88,81 @@ const getCategoriaId = (producto) => {
 const getCategoriaTitulo = (producto) => {
   const raw = producto?.categoria;
   if (!raw) return 'Sin categoria';
-  if (typeof raw === 'string') return 'Sin categoria';
+  if (typeof raw === 'string') {
+    const value = raw.trim();
+    return OBJECT_ID_REGEX.test(value) ? 'Sin categoria' : (value || 'Sin categoria');
+  }
   const titulo = raw?.label || raw?.nombre || '';
   return String(titulo || '').trim() || 'Sin categoria';
+};
+
+const getCategoryAliases = (cat) => {
+  const aliases = new Set();
+  const nombre = String(cat?.nombre || '').trim();
+  const label = String(cat?.label || '').trim();
+
+  if (nombre) aliases.add(normalizeCategoryKey(nombre));
+  if (label) aliases.add(normalizeCategoryKey(label));
+
+  if (label.includes('/')) {
+    const leaf = label.split('/').pop()?.trim();
+    if (leaf) aliases.add(normalizeCategoryKey(leaf));
+  }
+
+  return Array.from(aliases).filter(Boolean);
+};
+
+const buildCategoryLookups = (categorias) => {
+  const categoriasPorId = new Map();
+  const categoriaAliasAId = new Map();
+  const categoriaAliasesPorId = new Map();
+
+  categorias.forEach((cat) => {
+    const id = String(cat?._id || '').trim();
+    if (!id) return;
+
+    categoriasPorId.set(id, cat);
+    const aliases = getCategoryAliases(cat);
+    categoriaAliasesPorId.set(id, new Set(aliases));
+
+    aliases.forEach((alias) => {
+      if (!categoriaAliasAId.has(alias)) categoriaAliasAId.set(alias, id);
+    });
+  });
+
+  return { categoriasPorId, categoriaAliasAId, categoriaAliasesPorId };
+};
+
+const resolveProductoCategoriaId = (producto, lookups) => {
+  const idDirecto = getCategoriaId(producto);
+  if (idDirecto && lookups.categoriasPorId.has(String(idDirecto))) return idDirecto;
+
+  const raw = producto?.categoria;
+  if (typeof raw === 'string') {
+    const key = normalizeCategoryKey(raw);
+    return lookups.categoriaAliasAId.get(key) || '';
+  }
+
+  if (raw && typeof raw === 'object') {
+    const titulo = normalizeCategoryKey(raw?.label || raw?.nombre || '');
+    return lookups.categoriaAliasAId.get(titulo) || '';
+  }
+
+  return '';
+};
+
+const matchesCategoriaFiltro = (producto, filtroCategoria, lookups) => {
+  if (!filtroCategoria) return true;
+
+  const selectedId = String(filtroCategoria);
+  const prodCatId = resolveProductoCategoriaId(producto, lookups);
+  if (prodCatId === selectedId) return true;
+
+  const aliasesSeleccionados = lookups.categoriaAliasesPorId.get(selectedId);
+  if (!aliasesSeleccionados || aliasesSeleccionados.size === 0) return false;
+
+  const tituloProd = normalizeCategoryKey(getCategoriaTitulo(producto));
+  return aliasesSeleccionados.has(tituloProd);
 };
 
 export default function POS() {
@@ -127,6 +211,10 @@ export default function POS() {
   const userId = user?.id || user?._id || 'anonimo';
   const userKey = `${userId}_${selectedLocal?._id || 'sin-local'}`;
 
+  const categoryLookups = useMemo(() => buildCategoryLookups(categorias), [categorias]);
+
+  const resolverCategoriaId = (producto) => resolveProductoCategoriaId(producto, categoryLookups);
+
   const tieneVariantes = (producto) =>
     Array.isArray(producto?.variantes) &&
     producto.variantes.length > 0;
@@ -171,7 +259,7 @@ export default function POS() {
 
     orden.forEach((catId) => {
       prods
-        .filter((p) => getCategoriaId(p) === String(catId))
+        .filter((p) => resolverCategoriaId(p) === String(catId))
         .forEach((p) => {
           ordenados.push(p);
           usados.add(p._id);
@@ -325,27 +413,33 @@ export default function POS() {
     [productos, categorias]
   );
 
-  const productosFiltrados = productosOrdenados.filter((prod) => {
-    const coincideNombre = (prod.nombre || '')
-      .toLowerCase()
-      .includes(busquedaLower);
-    const coincideVariante = tieneVariantes(prod)
-      ? prod.variantes.some((vari) =>
-          (vari.nombre || '')
-            .toLowerCase()
-            .includes(busquedaLower)
-        )
-      : false;
+  const productosFiltrados = useMemo(
+    () =>
+      productosOrdenados.filter((prod) => {
+        const coincideNombre = (prod.nombre || '')
+          .toLowerCase()
+          .includes(busquedaLower);
+        const coincideVariante = tieneVariantes(prod)
+          ? prod.variantes.some((vari) =>
+              (vari.nombre || '')
+                .toLowerCase()
+                .includes(busquedaLower)
+            )
+          : false;
 
-    const coincideCategoria = filtroCategoria
-      ? getCategoriaId(prod) === String(filtroCategoria)
-      : true;
+        const coincideCategoria = matchesCategoriaFiltro(
+          prod,
+          filtroCategoria,
+          categoryLookups
+        );
 
-    const pasaBusqueda =
-      busquedaLower === '' || coincideNombre || coincideVariante;
+        const pasaBusqueda =
+          busquedaLower === '' || coincideNombre || coincideVariante;
 
-    return pasaBusqueda && coincideCategoria;
-  });
+        return pasaBusqueda && coincideCategoria;
+      }),
+    [productosOrdenados, busquedaLower, filtroCategoria, categoryLookups]
+  );
 
   const productosAgrupados = useMemo(() => {
     const gruposMap = new Map(
@@ -367,10 +461,14 @@ export default function POS() {
     const gruposExtraMap = new Map();
 
     productosFiltrados.forEach((prod) => {
-      const catId = getCategoriaId(prod);
+      const catId = resolverCategoriaId(prod);
       if (catId && gruposMap.has(String(catId))) {
         gruposMap.get(String(catId)).productos.push(prod);
-      } else if (catId || (prod?.categoria && typeof prod.categoria === 'object')) {
+      } else if (
+        catId ||
+        (prod?.categoria &&
+          (typeof prod.categoria === 'object' || typeof prod.categoria === 'string'))
+      ) {
         const titulo = getCategoriaTitulo(prod);
         const extraKey = `extra:${catId || titulo.toLowerCase()}`;
         if (!gruposExtraMap.has(extraKey)) {

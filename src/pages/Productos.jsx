@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useState, Fragment, useMemo } from 'react';
 
 import {
   Box,
@@ -413,29 +413,46 @@ export default function Productos() {
 
   const handleCerrarImagen = () => setImagenAmpliada(null);
 
-  const filtrarProductos = productos.filter((prod) => {
-    const nombreOk = prod.nombre
-      .toLowerCase()
-      .includes(busqueda.toLowerCase().trim());
+  const busquedaNormalizada = useMemo(
+    () => busqueda.toLowerCase().trim(),
+    [busqueda]
+  );
 
-    const categoriaOk =
-      !filtroCategoria || prod.categoria?._id === filtroCategoria;
+  const filtrarProductos = useMemo(
+    () =>
+      productos.filter((prod) => {
+        const nombreOk = (prod.nombre || '')
+          .toLowerCase()
+          .includes(busquedaNormalizada);
 
-    const stockTotal = obtenerStockTotal(prod);
+        const categoriaOk =
+          !filtroCategoria || prod.categoria?._id === filtroCategoria;
 
-    const precioOk =
-      (!precioMin || prod.precio >= Number(precioMin)) &&
-      (!precioMax || prod.precio <= Number(precioMax));
+        const stockTotal = obtenerStockTotal(prod);
 
-    const stockOk = !stockMin || stockTotal >= Number(stockMin);
+        const precioOk =
+          (!precioMin || prod.precio >= Number(precioMin)) &&
+          (!precioMax || prod.precio <= Number(precioMax));
 
-    return nombreOk && categoriaOk && precioOk && stockOk;
-  });
+        const stockOk = !stockMin || stockTotal >= Number(stockMin);
 
-  const totalPaginas = Math.ceil(filtrarProductos.length / productosPorPagina);
-  const productosEnPagina = filtrarProductos.slice(
-    (paginaActual - 1) * productosPorPagina,
-    paginaActual * productosPorPagina
+        return nombreOk && categoriaOk && precioOk && stockOk;
+      }),
+    [productos, busquedaNormalizada, filtroCategoria, precioMin, precioMax, stockMin]
+  );
+
+  const totalPaginas = useMemo(
+    () => Math.ceil(filtrarProductos.length / productosPorPagina),
+    [filtrarProductos.length, productosPorPagina]
+  );
+
+  const productosEnPagina = useMemo(
+    () =>
+      filtrarProductos.slice(
+        (paginaActual - 1) * productosPorPagina,
+        paginaActual * productosPorPagina
+      ),
+    [filtrarProductos, paginaActual, productosPorPagina]
   );
 
   const handleCambioPagina = (_evento, nuevaPagina) => {
