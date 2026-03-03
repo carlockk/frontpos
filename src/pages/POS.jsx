@@ -177,6 +177,7 @@ export default function POS() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [productoConVariantes, setProductoConVariantes] = useState(null);
   const [productoConAgregados, setProductoConAgregados] = useState(null);
+  const [headerScrolled, setHeaderScrolled] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -333,6 +334,16 @@ export default function POS() {
       navigate('/pos', { replace: true, state: {} });
     }
   }, [location.state, cargarCarrito, navigate]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setHeaderScrolled(window.scrollY > 2);
+    };
+
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const handleAgregar = (producto) => {
     if (tieneVariantes(producto)) {
@@ -561,7 +572,16 @@ export default function POS() {
           flexWrap: 'wrap',
           alignItems: 'center',
           mb: 3,
-          gap: 2
+          gap: 2,
+          position: { xs: 'static', sm: 'sticky' },
+          top: { sm: 0 },
+          zIndex: { sm: 20 },
+          backgroundColor: { sm: '#fff' },
+          boxShadow: { sm: 'none' },
+          borderRadius: { sm: 0 },
+          py: { sm: headerScrolled ? 1 : 0 },
+          px: { sm: 2 },
+          mx: { sm: -2 }
         }}
       >
         <Stack direction="row" spacing={1.5} alignItems="center">
@@ -613,8 +633,8 @@ export default function POS() {
         sx={{
           display: 'grid',
           gridTemplateColumns:
-            'repeat(auto-fill, minmax(180px, 1fr))',
-          gap: 2,
+            'repeat(auto-fill, minmax(168px, 1fr))',
+          gap: 1.5,
           alignItems: 'stretch'
         }}
       >
@@ -658,8 +678,8 @@ export default function POS() {
                   backgroundColor: cardBackground,
                   boxShadow:
                     '0 8px 24px rgba(15,23,42,0.12)',
-                  p: 1.5,
-                  minHeight: 280,
+                  p: 1.25,
+                  minHeight: 256,
                   transition:
                     'transform 0.2s ease, border 0.2s ease, box-shadow 0.2s ease',
                   '&:hover': {
@@ -682,7 +702,7 @@ export default function POS() {
                   overflow: 'hidden',
                   border: `1px solid ${thumbBorderColor}`,
                   backgroundColor: thumbBackground,
-                  mb: 1.5
+                  mb: 1.1
                 }}
               >
                 {imagenSrc ? (
@@ -794,7 +814,7 @@ export default function POS() {
                   fontWeight={700}
                   sx={{
                     color: titleColor,
-                    fontSize: '0.95rem'
+                    fontSize: '0.9rem'
                   }}
                 >
                   {prod.nombre}
@@ -807,7 +827,7 @@ export default function POS() {
                     variant="body2"
                     sx={{
                       color: descColor,
-                      fontSize: '0.75rem',
+                      fontSize: '0.72rem',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
@@ -829,7 +849,7 @@ export default function POS() {
                     variant="h6"
                     sx={{
                       color: theme.palette.primary.main,
-                      fontSize: '1rem'
+                      fontSize: '0.96rem'
                     }}
                   >
                     ${prod.precio.toLocaleString('es-CL')}
@@ -918,11 +938,12 @@ export default function POS() {
                 disabled={agotado}
                 onClick={() => handleAgregar(prod)}
                 sx={{
-                  mt: 2,
+                  mt: 1.25,
                   borderRadius: 1.25,
                   textTransform: 'none',
                   fontWeight: 600,
-                  fontSize: '0.85rem',
+                  fontSize: '0.78rem',
+                  minHeight: 32,
                   background: agotado
                     ? 'rgba(148,163,184,0.3)'
                     : 'linear-gradient(135deg, #1e40af, #2563eb)',
