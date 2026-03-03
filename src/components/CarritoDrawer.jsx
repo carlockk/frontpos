@@ -8,7 +8,7 @@ import {
   Stack,
   Alert
 } from '@mui/material';
-import { Add, Remove } from '@mui/icons-material';
+import { Add, Remove, Close } from '@mui/icons-material';
 import { useCarrito } from '../context/CarritoContext';
 import { useCaja } from '../context/CajaContext';
 import { registrarVenta, guardarTicket } from '../services/api'; // ✅ agregado
@@ -141,7 +141,14 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
           }
         }}
       >
-        <Typography variant="h6" gutterBottom>🛒 Carrito</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="h6" gutterBottom sx={{ mb: 0 }}>🛒 Carrito</Typography>
+          {isMobile && (
+            <IconButton size="small" onClick={onClose} aria-label="Cerrar carrito">
+              <Close fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
 
         {carrito.length === 0 ? (
           <Typography variant="body1" sx={{ mt: 2 }}>El carrito está vacío.</Typography>

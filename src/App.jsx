@@ -77,7 +77,7 @@ export default function App() {
                 <MenuIcon />
               </IconButton>
               <Typography variant="h6" noWrap sx={{ ml: 2 }}>
-                POS System
+                POSSail
               </Typography>
             </Toolbar>
           </AppBar>

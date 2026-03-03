@@ -559,7 +559,13 @@ export default function Sidebar({ mobileOpen, toggleDrawer }) {
           width: drawerWidth,
           boxSizing: 'border-box',
           backgroundColor: '#111827',
-          overflowX: 'hidden'
+          overflowX: 'hidden',
+          ...(isMobile
+            ? {
+                marginTop: '56px',
+                height: 'calc(100% - 56px)'
+              }
+            : {})
         }
       }}
     >
