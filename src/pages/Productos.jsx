@@ -326,6 +326,9 @@ export default function Productos() {
       precio: precioNum,
       controlarStock: String(baseUseForm.controlarStock)
     };
+    if (baseSeleccionada?.sourceProductoLocalId) {
+      payload.sourceProductoLocalId = baseSeleccionada.sourceProductoLocalId;
+    }
 
     if (baseUseForm.controlarStock) {
       if (baseUseVariantes.length > 0) {
@@ -355,7 +358,11 @@ export default function Productos() {
       alert('Este producto no tiene base asociada.');
       return;
     }
-    const base = { _id: prod.productoBaseId, nombre: prod.nombre };
+    const base = {
+      _id: prod.productoBaseId,
+      nombre: prod.nombre,
+      sourceProductoLocalId: prod._id
+    };
     setBaseSeleccionada(base);
     setBaseUseForm({ precio: String(prod.precio || ''), controlarStock: true, stock: '' });
     setBaseUseVariantes([]);
