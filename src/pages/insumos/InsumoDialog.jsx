@@ -37,7 +37,8 @@ const emptyForm = {
 const unidades = [
   { value: 'unid', label: 'Unidad' },
   { value: 'kg', label: 'Kilogramo' },
-  { value: 'lt', label: 'Litro' }
+  { value: 'lt', label: 'Litro' },
+  { value: 'pack', label: 'Pack' }
 ];
 
 export default function InsumoDialog({
