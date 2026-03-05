@@ -29,7 +29,6 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
 import InfoIcon from '@mui/icons-material/InfoOutlined';
-import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -46,7 +45,6 @@ import {
   obtenerInsumos,
   eliminarInsumo,
   actualizarEstadoInsumo,
-  actualizarNotaInsumo,
   obtenerObservacionesInsumo,
   crearObservacionInsumo,
   editarObservacionInsumo,
@@ -75,6 +73,30 @@ const estadoVencimiento = (lote, alertaDias) => {
   if (diff < 0) return 'vencido';
   if (diff <= alertaDias) return 'por_vencer';
   return 'normal';
+};
+
+const normalizarTexto = (valor = '') =>
+  String(valor || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const esNotaConteoFisico = (nota = '') => {
+  const texto = normalizarTexto(nota);
+  return texto.startsWith('conteo fisico');
+};
+
+const getObsReadStorageKey = (userId, localId) =>
+  `insumos_obs_read:${String(userId || 'anon')}:${String(localId || 'sin-local')}`;
+
+const getObsLastTimestamp = (observaciones = []) => {
+  if (!Array.isArray(observaciones) || observaciones.length === 0) return 0;
+  return observaciones.reduce((maxTs, obs) => {
+    const ts = new Date(obs?.actualizado_en || obs?.creado_en || 0).getTime();
+    if (!Number.isFinite(ts)) return maxTs;
+    return Math.max(maxTs, ts);
+  }, 0);
 };
 
 export default function Insumos() {
@@ -139,10 +161,15 @@ export default function Insumos() {
   const [obsEditId, setObsEditId] = useState(null);
   const [obsInput, setObsInput] = useState('');
   const [obsSaving, setObsSaving] = useState(false);
+  const [obsLeidosMap, setObsLeidosMap] = useState({});
   const [visibleCount, setVisibleCount] = useState(50);
   const tableContainerRef = useRef(null);
   const fetchInsumosSeqRef = useRef(0);
   const fetchCategoriasSeqRef = useRef(0);
+  const obsReadStorageKey = useMemo(
+    () => getObsReadStorageKey(usuario?._id, selectedLocal?._id),
+    [usuario?._id, selectedLocal?._id]
+  );
 
 
   const fetchInsumos = async () => {
@@ -207,8 +234,27 @@ export default function Insumos() {
     setObsList([]);
     setObsEditId(null);
     setObsInput('');
+    setObsLeidosMap({});
     setVisibleCount(50);
   }, [selectedLocal?._id]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(obsReadStorageKey);
+      if (!raw) {
+        setObsLeidosMap({});
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        setObsLeidosMap(parsed);
+      } else {
+        setObsLeidosMap({});
+      }
+    } catch {
+      setObsLeidosMap({});
+    }
+  }, [obsReadStorageKey]);
 
   useEffect(() => {
     const cargarLocales = async () => {
@@ -232,31 +278,15 @@ export default function Insumos() {
     }
   };
 
-  const handleLimpiarNota = async (insumoId) => {
-    if (!puedeEditar) return;
-    const confirmar = window.confirm('Seguro que deseas borrar la nota rápida de este insumo?');
-    if (!confirmar) return;
-    try {
-      await actualizarNotaInsumo(insumoId, { nota: '' });
-      setInfo('Nota eliminada.');
-      fetchInsumos();
-    } catch (err) {
-      setError(err?.response?.data?.error || 'No se pudo eliminar la nota.');
-    }
-  };
-
   const puedeGestionarObs = puedeEditar;
 
   const syncObsResumenInsumo = (insumoId, observaciones = []) => {
-    const ordenadas = [...(observaciones || [])].sort(
-      (a, b) => new Date(b.actualizado_en || b.creado_en || 0) - new Date(a.actualizado_en || a.creado_en || 0)
-    );
-    const ultima = ordenadas[0]?.texto ? String(ordenadas[0].texto).trim() : '';
+    const lista = Array.isArray(observaciones) ? observaciones : [];
 
     setInsumos((prev) =>
       prev.map((item) =>
         item._id === insumoId
-          ? { ...item, ultima_nota: ultima || null }
+          ? { ...item, observaciones: lista }
           : item
       )
     );
@@ -269,12 +299,30 @@ export default function Insumos() {
       const list = Array.isArray(res.data) ? res.data : [];
       setObsList(list);
       syncObsResumenInsumo(insumoId, list);
+      return list;
     } catch (err) {
       setObsList([]);
       setError(err?.response?.data?.error || 'No se pudieron cargar las observaciones.');
+      return [];
     } finally {
       setObsLoading(false);
     }
+  };
+
+  const marcarObsComoLeida = (insumoId, observaciones = []) => {
+    const latestTs = getObsLastTimestamp(observaciones);
+    if (!insumoId || !latestTs) return;
+    setObsLeidosMap((prev) => {
+      const prevTs = Number(prev?.[insumoId] || 0);
+      if (prevTs >= latestTs) return prev;
+      const next = { ...prev, [insumoId]: latestTs };
+      try {
+        localStorage.setItem(obsReadStorageKey, JSON.stringify(next));
+      } catch {
+        // Ignorar errores de persistencia local.
+      }
+      return next;
+    });
   };
 
   const openObsDialog = async (insumo) => {
@@ -286,7 +334,8 @@ export default function Insumos() {
     setObsInput('');
     setError('');
     setInfo('');
-    await cargarObservaciones(insumo._id);
+    const list = await cargarObservaciones(insumo._id);
+    marcarObsComoLeida(insumo._id, list);
   };
 
   const handleStartEditObs = (obs) => {
@@ -319,7 +368,8 @@ export default function Insumos() {
       }
       setObsEditId(null);
       setObsInput('');
-      await cargarObservaciones(obsTarget._id);
+      const list = await cargarObservaciones(obsTarget._id);
+      marcarObsComoLeida(obsTarget._id, list);
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo guardar la observacion.');
     } finally {
@@ -339,7 +389,8 @@ export default function Insumos() {
         handleCancelEditObs();
       }
       setInfo('Observacion eliminada.');
-      await cargarObservaciones(obsTarget._id);
+      const list = await cargarObservaciones(obsTarget._id);
+      marcarObsComoLeida(obsTarget._id, list);
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo eliminar la observacion.');
     } finally {
@@ -908,6 +959,15 @@ export default function Insumos() {
                     {insumosPaginados.map((insumo, index) => {
                         const stockBajo = Number(insumo.stock_total || 0) <= Number(insumo.stock_minimo || 0);
                         const oculto = insumo.activo === false;
+                        const notaConteo = String(insumo.ultima_nota || '').trim();
+                        const mostrarInfoConteo = Boolean(notaConteo) && esNotaConteoFisico(notaConteo);
+                        const cantidadObservaciones = Array.isArray(insumo.observaciones) ? insumo.observaciones.length : 0;
+                        const esObsLegacy = !cantidadObservaciones && Boolean(notaConteo) && !esNotaConteoFisico(notaConteo);
+                        const tieneObservaciones = cantidadObservaciones > 0 || esObsLegacy;
+                        const latestObsTs = getObsLastTimestamp(insumo.observaciones) ||
+                          (esObsLegacy ? new Date(insumo.actualizado_en || 0).getTime() : 0);
+                        const ultimoLeidoTs = Number(obsLeidosMap?.[insumo._id] || 0);
+                        const tieneObsNoLeidas = tieneObservaciones && latestObsTs > ultimoLeidoTs;
                         return (
                           <Draggable
                             key={insumo._id}
@@ -939,36 +999,20 @@ export default function Insumos() {
                                 <TableCell>
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="body2">{insumo.nombre}</Typography>
-                                    {/*
-                                      Nota/observacion junto al nombre (temporalmente oculto).
-                                      Se mantiene comentado para reutilizarlo despues si vuelve a ser necesario.
-                                    {insumo.ultima_nota && (
-                                      <>
-                                        <Tooltip title={insumo.ultima_nota} arrow disableHoverListener={isMobile}>
-                                          <IconButton
-                                            size="small"
-                                            onClick={() => {
-                                              if (!isMobile) return;
-                                              setDescTexto(insumo.ultima_nota);
-                                              setDescOpen(true);
-                                            }}
-                                          >
-                                            <InfoIcon fontSize="small" />
-                                          </IconButton>
-                                        </Tooltip>
-                                        {puedeGestionarObs && (
-                                          <Tooltip title="Borrar nota" arrow>
-                                            <IconButton
-                                              size="small"
-                                              onClick={() => handleLimpiarNota(insumo._id)}
-                                            >
-                                              <CloseIcon fontSize="small" />
-                                            </IconButton>
-                                          </Tooltip>
-                                        )}
-                                      </>
+                                    {mostrarInfoConteo && (
+                                      <Tooltip title={notaConteo} arrow disableHoverListener={isMobile}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            if (!isMobile) return;
+                                            setDescTexto(notaConteo);
+                                            setDescOpen(true);
+                                          }}
+                                        >
+                                          <InfoIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
                                     )}
-                                    */}
                                   </Stack>
                                 </TableCell>
                                 <TableCell>
@@ -1008,13 +1052,38 @@ export default function Insumos() {
                                   </Button>
                                 </TableCell>
                                 <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                                  {(puedeGestionarObs || String(insumo.ultima_nota || '').trim()) ? (
+                                  {(puedeGestionarObs || tieneObservaciones) ? (
                                     <Button
                                       size="small"
                                       onClick={() => openObsDialog(insumo)}
                                       sx={{ fontWeight: 400, color: '#6b7280', fontSize: '0.75rem', minWidth: 'auto', px: 0.5 }}
                                     >
-                                      {String(insumo.ultima_nota || '').trim() ? 'Ver' : 'Agregar'}
+                                      {tieneObservaciones ? (
+                                        <>
+                                          Ver
+                                          {tieneObsNoLeidas && (
+                                            <Box
+                                              component="span"
+                                              sx={{
+                                                ml: 0.5,
+                                                width: 14,
+                                                height: 14,
+                                                borderRadius: '50%',
+                                                backgroundColor: '#dc2626',
+                                                color: '#fff',
+                                                fontSize: '0.6rem',
+                                                fontWeight: 700,
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                lineHeight: 1
+                                              }}
+                                            >
+                                              1
+                                            </Box>
+                                          )}
+                                        </>
+                                      ) : 'Agregar'}
                                     </Button>
                                   ) : (
                                     <Typography variant="caption" color="text.secondary">-</Typography>
