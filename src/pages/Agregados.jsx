@@ -43,7 +43,8 @@ const emptyGrupo = {
   categoriaPrincipal: '',
   titulo: '',
   descripcion: '',
-  modoSeleccion: 'multiple'
+  modoSeleccion: 'multiple',
+  obligatorio: false
 };
 const emptyAgregado = {
   nombre: '',
@@ -251,7 +252,8 @@ export default function Agregados() {
       categoriaPrincipal: grupo.categoriaPrincipal || '',
       titulo: grupo.titulo || '',
       descripcion: grupo.descripcion || '',
-      modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple'
+      modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple',
+      obligatorio: Boolean(grupo.obligatorio)
     });
     setGrupoOpen(true);
   };
@@ -308,7 +310,8 @@ export default function Agregados() {
             categoriaPrincipal,
             titulo: grupo.titulo || '',
             descripcion: grupo.descripcion || '',
-            modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple'
+            modoSeleccion: grupo.modoSeleccion === 'unico' ? 'unico' : 'multiple',
+            obligatorio: Boolean(grupo.obligatorio)
           })
         )
       );
@@ -532,6 +535,7 @@ export default function Agregados() {
             <TableRow>
               <TableCell>Titulo</TableCell>
               <TableCell>Tipo seleccion</TableCell>
+              <TableCell>Campo</TableCell>
               <TableCell>Descripcion</TableCell>
               <TableCell>Opciones dentro del titulo</TableCell>
               <TableCell align="right">Acciones</TableCell>
@@ -539,12 +543,13 @@ export default function Agregados() {
           </TableHead>
           <TableBody>
             {gruposCategoriaActiva.length === 0 ? (
-              <TableRow><TableCell colSpan={5} align="center">Sin titulos de agregado en esta categoria</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} align="center">Sin titulos de agregado en esta categoria</TableCell></TableRow>
             ) : (
               gruposCategoriaActiva.map((grupo) => (
                 <TableRow key={grupo._id}>
                   <TableCell>{grupo.titulo}</TableCell>
                   <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
+                  <TableCell>{grupo.obligatorio ? 'Obligatorio' : 'Opcional'}</TableCell>
                   <TableCell>{grupo.descripcion || '-'}</TableCell>
                   <TableCell>
                     {(agregadosByGrupo.get(String(grupo._id)) || [])
@@ -673,6 +678,7 @@ export default function Agregados() {
                 <TableRow>
                   <TableCell>Titulo</TableCell>
                   <TableCell>Tipo seleccion</TableCell>
+                  <TableCell>Campo</TableCell>
                   <TableCell>Descripcion</TableCell>
                   <TableCell>Opciones</TableCell>
                 </TableRow>
@@ -680,13 +686,14 @@ export default function Agregados() {
               <TableBody>
                 {!categoriaEditData?.grupos || categoriaEditData.grupos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} align="center">Sin titulos en esta categoria</TableCell>
+                    <TableCell colSpan={5} align="center">Sin titulos en esta categoria</TableCell>
                   </TableRow>
                 ) : (
                   categoriaEditData.grupos.map((grupo) => (
                     <TableRow key={`categoria-edit-grupo-${grupo._id}`}>
                       <TableCell>{grupo.titulo || '-'}</TableCell>
                       <TableCell>{grupo.modoSeleccion === 'unico' ? 'Radio (uno)' : 'Check (muchos)'}</TableCell>
+                      <TableCell>{grupo.obligatorio ? 'Obligatorio' : 'Opcional'}</TableCell>
                       <TableCell>{grupo.descripcion || '-'}</TableCell>
                       <TableCell>
                         {(agregadosByGrupo.get(String(grupo._id)) || [])
@@ -749,6 +756,21 @@ export default function Agregados() {
             >
               <MenuItem value="multiple">Check (permite elegir varios)</MenuItem>
               <MenuItem value="unico">Radio (permite elegir uno)</MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Campo"
+              value={grupoForm.obligatorio ? 'obligatorio' : 'opcional'}
+              onChange={(e) =>
+                setGrupoForm((prev) => ({
+                  ...prev,
+                  obligatorio: e.target.value === 'obligatorio'
+                }))
+              }
+              helperText="Si no eliges nada, queda como opcional por defecto"
+            >
+              <MenuItem value="opcional">Opcional</MenuItem>
+              <MenuItem value="obligatorio">Obligatorio</MenuItem>
             </TextField>
           </Stack>
         </DialogContent>

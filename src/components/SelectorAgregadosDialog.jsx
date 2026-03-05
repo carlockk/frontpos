@@ -50,6 +50,7 @@ export default function SelectorAgregadosDialog({
             categoriaPrincipal: '',
             titulo: 'Otros agregados',
             modoSeleccion: 'multiple',
+            obligatorio: false,
             items: []
           });
         }
@@ -65,6 +66,7 @@ export default function SelectorAgregadosDialog({
             categoriaPrincipal: grupo?.categoriaPrincipal || '',
             titulo: grupo?.titulo || 'Otros agregados',
             modoSeleccion: grupo?.modoSeleccion === 'unico' ? 'unico' : 'multiple',
+            obligatorio: Boolean(grupo?.obligatorio),
             items: []
           });
         }
@@ -107,12 +109,18 @@ export default function SelectorAgregadosDialog({
   }, [gruposConfigurados]);
 
   const [seleccionados, setSeleccionados] = useState([]);
+  const [selectionError, setSelectionError] = useState('');
 
   useEffect(() => {
     if (open) {
       setSeleccionados([]);
+      setSelectionError('');
     }
   }, [open, producto?._id, variante?._id]);
+
+  useEffect(() => {
+    if (selectionError) setSelectionError('');
+  }, [seleccionados]);
 
   const buildAgregadoPayload = (agregado) => ({
     agregadoId: agregado._id || agregado.agregadoId || null,
@@ -154,6 +162,29 @@ export default function SelectorAgregadosDialog({
     ).agregadoId || '';
 
   const totalExtras = seleccionados.reduce((acc, agg) => acc + (Number(agg.precio) || 0), 0);
+  const selectedIds = new Set(
+    (seleccionados || []).map((item) => String(item?.agregadoId || item?._id || '')).filter(Boolean)
+  );
+
+  const validarObligatorios = () => {
+    const faltantes = (gruposConfigurados || [])
+      .filter((grupo) => grupo?.obligatorio)
+      .filter((grupo) => {
+        const idsGrupo = (grupo.items || [])
+          .map((agg) => String(agg?._id || agg?.agregadoId || ''))
+          .filter(Boolean);
+        return !idsGrupo.some((id) => selectedIds.has(id));
+      })
+      .map((grupo) => grupo.titulo || 'Titulo sin nombre');
+
+    if (faltantes.length > 0) {
+      setSelectionError(`Debes seleccionar una opcion en: ${faltantes.join(', ')}`);
+      return false;
+    }
+
+    setSelectionError('');
+    return true;
+  };
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -177,7 +208,9 @@ export default function SelectorAgregadosDialog({
                   {categoria.grupos.map((grupo) => (
                     <Box key={grupo.key}>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        {grupo.titulo} {grupo.modoSeleccion === 'unico' ? '(elige uno)' : '(elige uno o varios)'}
+                        {grupo.titulo}{' '}
+                        {grupo.modoSeleccion === 'unico' ? '(elige uno)' : '(elige uno o varios)'}
+                        {grupo.obligatorio ? ' - obligatorio' : ' - opcional'}
                       </Typography>
                       {grupo.modoSeleccion === 'unico' ? (
                         <RadioGroup
@@ -265,13 +298,24 @@ export default function SelectorAgregadosDialog({
             ))}
           </Stack>
         )}
+        {selectionError ? (
+          <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+            {selectionError}
+          </Typography>
+        ) : null}
       </DialogContent>
       <DialogActions sx={{ px: 2, py: 1.25 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mr: 'auto' }}>
           Extras: ${totalExtras.toLocaleString('es-CL')}
         </Typography>
         <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={() => onConfirm?.(seleccionados)}>
+        <Button
+          variant="contained"
+          onClick={() => {
+            if (!validarObligatorios()) return;
+            onConfirm?.(seleccionados);
+          }}
+        >
           Agregar al carrito
         </Button>
       </DialogActions>
