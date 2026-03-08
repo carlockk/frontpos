@@ -368,8 +368,7 @@ export default function Insumos() {
       }
       setObsEditId(null);
       setObsInput('');
-      const list = await cargarObservaciones(obsTarget._id);
-      marcarObsComoLeida(obsTarget._id, list);
+      await cargarObservaciones(obsTarget._id);
     } catch (err) {
       setError(err?.response?.data?.error || 'No se pudo guardar la observacion.');
     } finally {
