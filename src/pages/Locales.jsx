@@ -3,11 +3,13 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   Paper,
   Stack,
@@ -32,7 +34,21 @@ import {
   eliminarLocal
 } from '../services/api';
 
-const emptyForm = { nombre: '', direccion: '', telefono: '', correo: '' };
+const emptyForm = {
+  nombre: '',
+  direccion: '',
+  telefono: '',
+  correo: '',
+  servicios: {
+    tienda: true,
+    retiro: true,
+    delivery: true,
+  },
+  pagos_web: {
+    efectivo: true,
+    tarjeta: true,
+  },
+};
 
 export default function Locales() {
   const { usuario } = useAuth();
@@ -81,7 +97,16 @@ export default function Locales() {
       nombre: local.nombre || '',
       direccion: local.direccion || '',
       telefono: local.telefono || '',
-      correo: local.correo || ''
+      correo: local.correo || '',
+      servicios: {
+        tienda: local?.servicios?.tienda !== false,
+        retiro: local?.servicios?.retiro !== false,
+        delivery: local?.servicios?.delivery !== false,
+      },
+      pagos_web: {
+        efectivo: local?.pagos_web?.efectivo !== false,
+        tarjeta: local?.pagos_web?.tarjeta !== false,
+      },
     });
     setEditingId(local._id);
     setDialogOpen(true);
@@ -98,11 +123,30 @@ export default function Locales() {
       return;
     }
 
+    if (!Object.values(form.servicios || {}).some(Boolean)) {
+      setError('Debes habilitar al menos un tipo de pedido.');
+      return;
+    }
+
+    if (!Object.values(form.pagos_web || {}).some(Boolean)) {
+      setError('Debes habilitar al menos un metodo de pago web.');
+      return;
+    }
+
     const payload = {
       nombre: form.nombre.trim(),
       direccion: form.direccion.trim(),
       telefono: form.telefono.trim(),
-      correo: form.correo.trim()
+      correo: form.correo.trim(),
+      servicios: {
+        tienda: Boolean(form.servicios?.tienda),
+        retiro: Boolean(form.servicios?.retiro),
+        delivery: Boolean(form.servicios?.delivery),
+      },
+      pagos_web: {
+        efectivo: Boolean(form.pagos_web?.efectivo),
+        tarjeta: Boolean(form.pagos_web?.tarjeta),
+      },
     };
 
     try {
@@ -157,6 +201,28 @@ export default function Locales() {
 
   const closeDeleteDialog = () => {
     setDeleteTarget(null);
+  };
+
+  const updateServiceToggle = (key) => (event) => {
+    const checked = event.target.checked;
+    setForm((prev) => ({
+      ...prev,
+      servicios: {
+        ...prev.servicios,
+        [key]: checked,
+      },
+    }));
+  };
+
+  const updatePaymentToggle = (key) => (event) => {
+    const checked = event.target.checked;
+    setForm((prev) => ({
+      ...prev,
+      pagos_web: {
+        ...prev.pagos_web,
+        [key]: checked,
+      },
+    }));
   };
 
   return (
@@ -221,13 +287,15 @@ export default function Locales() {
                   <TableCell>Direccion</TableCell>
                   <TableCell>Telefono</TableCell>
                   <TableCell>Correo</TableCell>
+                  <TableCell>Canales web</TableCell>
+                  <TableCell>Pagos web</TableCell>
                   {isAdmin && <TableCell align="right">Acciones</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {locales.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 5 : 4} align="center">
+                    <TableCell colSpan={isAdmin ? 7 : 6} align="center">
                       No hay locales registrados.
                     </TableCell>
                   </TableRow>
@@ -238,6 +306,19 @@ export default function Locales() {
                     <TableCell>{local.direccion || '-'}</TableCell>
                     <TableCell>{local.telefono || '-'}</TableCell>
                     <TableCell>{local.correo || '-'}</TableCell>
+                    <TableCell>
+                      {[
+                        local?.servicios?.tienda !== false ? 'Tienda' : null,
+                        local?.servicios?.retiro !== false ? 'Retiro' : null,
+                        local?.servicios?.delivery !== false ? 'Delivery' : null,
+                      ].filter(Boolean).join(', ') || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {[
+                        local?.pagos_web?.tarjeta !== false ? 'Tarjeta' : null,
+                        local?.pagos_web?.efectivo !== false ? 'Efectivo' : null,
+                      ].filter(Boolean).join(', ') || '-'}
+                    </TableCell>
                     {isAdmin && (
                       <TableCell align="right">
                         <IconButton onClick={() => openEdit(local)} size="small" sx={{ mr: 0.5 }}>
@@ -288,6 +369,42 @@ export default function Locales() {
               value={form.correo}
               onChange={(e) => setForm((prev) => ({ ...prev, correo: e.target.value }))}
             />
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Tipos de pedido visibles en web
+              </Typography>
+              <Stack>
+                <FormControlLabel
+                  control={<Checkbox checked={Boolean(form.servicios?.tienda)} onChange={updateServiceToggle('tienda')} />}
+                  label="Para consumir en tienda"
+                />
+                <FormControlLabel
+                  control={<Checkbox checked={Boolean(form.servicios?.retiro)} onChange={updateServiceToggle('retiro')} />}
+                  label="Retiro en tienda"
+                />
+                <FormControlLabel
+                  control={<Checkbox checked={Boolean(form.servicios?.delivery)} onChange={updateServiceToggle('delivery')} />}
+                  label="Delivery"
+                />
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Metodos de pago web
+              </Typography>
+              <Stack>
+                <FormControlLabel
+                  control={<Checkbox checked={Boolean(form.pagos_web?.tarjeta)} onChange={updatePaymentToggle('tarjeta')} />}
+                  label="Tarjeta (Webpay)"
+                />
+                <FormControlLabel
+                  control={<Checkbox checked={Boolean(form.pagos_web?.efectivo)} onChange={updatePaymentToggle('efectivo')} />}
+                  label="Efectivo"
+                />
+              </Stack>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
