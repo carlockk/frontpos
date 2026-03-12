@@ -25,6 +25,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/EditOutlined';
 import DeleteIcon from '@mui/icons-material/DeleteOutline';
+import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -33,6 +34,7 @@ import {
   editarLocal,
   eliminarLocal
 } from '../services/api';
+import DeliveryZonesEditor from '../components/DeliveryZonesEditor';
 
 const emptyForm = {
   nombre: '',
@@ -48,6 +50,7 @@ const emptyForm = {
     efectivo: true,
     tarjeta: true,
   },
+  delivery_zones: [],
 };
 
 export default function Locales() {
@@ -66,6 +69,7 @@ export default function Locales() {
 
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [zonesDialogOpen, setZonesDialogOpen] = useState(false);
 
   const fetchLocales = async () => {
     setLoading(true);
@@ -107,11 +111,17 @@ export default function Locales() {
         efectivo: local?.pagos_web?.efectivo !== false,
         tarjeta: local?.pagos_web?.tarjeta !== false,
       },
+      delivery_zones: Array.isArray(local?.delivery_zones) ? local.delivery_zones : [],
     });
     setEditingId(local._id);
     setDialogOpen(true);
     setInfo('');
     setError('');
+  };
+
+  const openZonesEditor = (local) => {
+    openEdit(local);
+    setZonesDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -147,6 +157,7 @@ export default function Locales() {
         efectivo: Boolean(form.pagos_web?.efectivo),
         tarjeta: Boolean(form.pagos_web?.tarjeta),
       },
+      delivery_zones: Array.isArray(form.delivery_zones) ? form.delivery_zones : [],
     };
 
     try {
@@ -197,6 +208,7 @@ export default function Locales() {
     setDialogOpen(false);
     setForm(emptyForm);
     setEditingId(null);
+    setZonesDialogOpen(false);
   };
 
   const closeDeleteDialog = () => {
@@ -324,6 +336,9 @@ export default function Locales() {
                         <IconButton onClick={() => openEdit(local)} size="small" sx={{ mr: 0.5 }}>
                           <EditIcon fontSize="small" />
                         </IconButton>
+                        <IconButton onClick={() => openZonesEditor(local)} size="small" sx={{ mr: 0.5 }}>
+                          <RoomOutlinedIcon fontSize="small" />
+                        </IconButton>
                         <IconButton
                           color="error"
                           onClick={() => confirmDelete(local)}
@@ -405,6 +420,22 @@ export default function Locales() {
                 />
               </Stack>
             </Box>
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Zonas de delivery
+              </Typography>
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Button variant="outlined" onClick={() => setZonesDialogOpen(true)}>
+                  Configurar zonas
+                </Button>
+                <Typography variant="body2" color="text.secondary">
+                  {Array.isArray(form.delivery_zones) && form.delivery_zones.length > 0
+                    ? `${form.delivery_zones.length} zona(s) configurada(s)`
+                    : 'Sin zonas configuradas. Si no agregas zonas, el delivery quedara sin restriccion geográfica.'}
+                </Typography>
+              </Stack>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -438,6 +469,13 @@ export default function Locales() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <DeliveryZonesEditor
+        open={zonesDialogOpen}
+        onClose={() => setZonesDialogOpen(false)}
+        zones={form.delivery_zones}
+        onChange={(nextZones) => setForm((prev) => ({ ...prev, delivery_zones: nextZones }))}
+      />
     </Box>
   );
 }
