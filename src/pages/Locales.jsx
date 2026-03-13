@@ -49,6 +49,13 @@ const emptyForm = {
   pagos_web: {
     efectivo: true,
     tarjeta: true,
+    transferencia: false,
+    transferencia_datos: {
+      nombre: '',
+      rut: '',
+      numero_cuenta: '',
+      correo: '',
+    },
   },
   delivery_zones: [],
 };
@@ -70,6 +77,7 @@ export default function Locales() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [zonesDialogOpen, setZonesDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 
   const fetchLocales = async () => {
     setLoading(true);
@@ -110,6 +118,13 @@ export default function Locales() {
       pagos_web: {
         efectivo: local?.pagos_web?.efectivo !== false,
         tarjeta: local?.pagos_web?.tarjeta !== false,
+        transferencia: local?.pagos_web?.transferencia === true,
+        transferencia_datos: {
+          nombre: local?.pagos_web?.transferencia_datos?.nombre || '',
+          rut: local?.pagos_web?.transferencia_datos?.rut || '',
+          numero_cuenta: local?.pagos_web?.transferencia_datos?.numero_cuenta || '',
+          correo: local?.pagos_web?.transferencia_datos?.correo || '',
+        },
       },
       delivery_zones: Array.isArray(local?.delivery_zones) ? local.delivery_zones : [],
     });
@@ -138,9 +153,21 @@ export default function Locales() {
       return;
     }
 
-    if (!Object.values(form.pagos_web || {}).some(Boolean)) {
+    if (![
+      Boolean(form.pagos_web?.efectivo),
+      Boolean(form.pagos_web?.tarjeta),
+      Boolean(form.pagos_web?.transferencia),
+    ].some(Boolean)) {
       setError('Debes habilitar al menos un metodo de pago web.');
       return;
+    }
+
+    if (form.pagos_web?.transferencia) {
+      const cuenta = form.pagos_web?.transferencia_datos || {};
+      if (!cuenta.nombre?.trim() || !cuenta.rut?.trim() || !cuenta.numero_cuenta?.trim() || !cuenta.correo?.trim()) {
+        setError('Completa los datos de la cuenta para habilitar transferencia.');
+        return;
+      }
     }
 
     const payload = {
@@ -156,6 +183,13 @@ export default function Locales() {
       pagos_web: {
         efectivo: Boolean(form.pagos_web?.efectivo),
         tarjeta: Boolean(form.pagos_web?.tarjeta),
+        transferencia: Boolean(form.pagos_web?.transferencia),
+        transferencia_datos: {
+          nombre: form.pagos_web?.transferencia_datos?.nombre?.trim() || '',
+          rut: form.pagos_web?.transferencia_datos?.rut?.trim() || '',
+          numero_cuenta: form.pagos_web?.transferencia_datos?.numero_cuenta?.trim() || '',
+          correo: form.pagos_web?.transferencia_datos?.correo?.trim() || '',
+        },
       },
       delivery_zones: Array.isArray(form.delivery_zones) ? form.delivery_zones : [],
     };
@@ -170,6 +204,8 @@ export default function Locales() {
         setInfo('Local creado.');
       }
       setDialogOpen(false);
+      setTransferDialogOpen(false);
+      setZonesDialogOpen(false);
       setForm(emptyForm);
       setEditingId(null);
       fetchLocales();
@@ -209,6 +245,7 @@ export default function Locales() {
     setForm(emptyForm);
     setEditingId(null);
     setZonesDialogOpen(false);
+    setTransferDialogOpen(false);
   };
 
   const closeDeleteDialog = () => {
@@ -329,6 +366,7 @@ export default function Locales() {
                       {[
                         local?.pagos_web?.tarjeta !== false ? 'Tarjeta' : null,
                         local?.pagos_web?.efectivo !== false ? 'Efectivo' : null,
+                        local?.pagos_web?.transferencia === true ? 'Transferencia' : null,
                       ].filter(Boolean).join(', ') || '-'}
                     </TableCell>
                     {isAdmin && (
@@ -418,6 +456,27 @@ export default function Locales() {
                   control={<Checkbox checked={Boolean(form.pagos_web?.efectivo)} onChange={updatePaymentToggle('efectivo')} />}
                   label="Efectivo"
                 />
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={<Checkbox checked={Boolean(form.pagos_web?.transferencia)} onChange={updatePaymentToggle('transferencia')} />}
+                    label="Transferencia bancaria"
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => setTransferDialogOpen(true)}
+                    aria-label="Editar datos de transferencia"
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+                {form.pagos_web?.transferencia && (
+                  <Typography variant="caption" color="text.secondary">
+                    {form.pagos_web?.transferencia_datos?.nombre
+                      ? `Cuenta configurada para ${form.pagos_web.transferencia_datos.nombre}`
+                      : 'Faltan datos de la cuenta bancaria.'}
+                  </Typography>
+                )}
               </Stack>
             </Box>
 
@@ -467,6 +526,75 @@ export default function Locales() {
           >
             {deleteLoading ? 'Eliminando...' : 'Eliminar'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={transferDialogOpen} onClose={() => setTransferDialogOpen(false)} fullWidth maxWidth="xs">
+        <DialogTitle>Datos para transferencia</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Nombre titular"
+              value={form.pagos_web?.transferencia_datos?.nombre || ''}
+              onChange={(e) => setForm((prev) => ({
+                ...prev,
+                pagos_web: {
+                  ...prev.pagos_web,
+                  transferencia_datos: {
+                    ...prev.pagos_web.transferencia_datos,
+                    nombre: e.target.value,
+                  },
+                },
+              }))}
+              autoFocus
+            />
+            <TextField
+              label="RUT"
+              value={form.pagos_web?.transferencia_datos?.rut || ''}
+              onChange={(e) => setForm((prev) => ({
+                ...prev,
+                pagos_web: {
+                  ...prev.pagos_web,
+                  transferencia_datos: {
+                    ...prev.pagos_web.transferencia_datos,
+                    rut: e.target.value,
+                  },
+                },
+              }))}
+            />
+            <TextField
+              label="Numero de cuenta"
+              value={form.pagos_web?.transferencia_datos?.numero_cuenta || ''}
+              onChange={(e) => setForm((prev) => ({
+                ...prev,
+                pagos_web: {
+                  ...prev.pagos_web,
+                  transferencia_datos: {
+                    ...prev.pagos_web.transferencia_datos,
+                    numero_cuenta: e.target.value,
+                  },
+                },
+              }))}
+            />
+            <TextField
+              label="Correo de la cuenta"
+              type="email"
+              value={form.pagos_web?.transferencia_datos?.correo || ''}
+              onChange={(e) => setForm((prev) => ({
+                ...prev,
+                pagos_web: {
+                  ...prev.pagos_web,
+                  transferencia_datos: {
+                    ...prev.pagos_web.transferencia_datos,
+                    correo: e.target.value,
+                  },
+                },
+              }))}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTransferDialogOpen(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
