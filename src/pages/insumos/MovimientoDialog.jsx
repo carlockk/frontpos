@@ -43,7 +43,7 @@ export default function MovimientoDialog({
   }, [open, tipoFijo, tipoInicial]);
 
   const handleMovimiento = async () => {
-    if (!insumo?._id) return;
+    if (!insumo?._id || saving) return;
     const cantidad = Number(form.cantidad);
     const stockActual = Number(insumo?.stock_total || 0);
     if (!Number.isFinite(cantidad) || cantidad < 0) {
@@ -71,8 +71,10 @@ export default function MovimientoDialog({
         tipoFinal = 'entrada';
         cantidadFinal = Math.abs(diferencia);
       }
-      const usado = Math.abs(diferencia);
-      const notaAuto = `Conteo físico. Stock final: ${cantidad}. Usado: ${usado}.`;
+      const ajusteTexto = diferencia > 0
+        ? `Ajuste aplicado: -${Math.abs(diferencia)}.`
+        : `Ajuste aplicado: +${Math.abs(diferencia)}.`;
+      const notaAuto = `Conteo físico. Stock final: ${cantidad}. ${ajusteTexto}`;
       notaFinal = notaFinal ? `${notaFinal} | ${notaAuto}` : notaAuto;
       loteId = undefined;
       lote = undefined;
