@@ -110,9 +110,8 @@ export default function ModalPago({ open, onClose, onSubmit, total = 0 }) {
 
             {montoRecibido !== '' && vuelto !== null && !Number.isNaN(vuelto) && (
               <Typography
-                variant="body2"
-                color={vuelto < 0 ? 'error.main' : 'success.main'}
-                sx={{ fontWeight: 600 }}
+                color="error.main"
+                sx={{ fontWeight: 800, fontSize: '2rem', lineHeight: 1.1 }}
               >
                 {vuelto < 0
                   ? `Faltan $${Math.abs(vuelto).toLocaleString('es-CL')}`
