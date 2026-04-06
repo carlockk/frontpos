@@ -429,13 +429,15 @@ export default function Restaurante() {
     setOpenCobroMesaDialog(true);
   };
 
-  const cobrarEnMesa = async ({ tipoPago, tipoPedido }) => {
+  const cobrarEnMesa = async ({ tipoPago, tipoPedido, montoRecibido, vuelto }) => {
     if (!comandaCobroMesa?._id) return;
     try {
       await cobrarComandaEnMesa(comandaCobroMesa._id, {
         tipo_pago: tipoPago,
         tipo_pedido: tipoPedido || `restaurante mesa ${comandaCobroMesa?.mesa?.numero || ''}`,
-        cobrador_nombre: usuario?.nombre || usuario?.email || ''
+        cobrador_nombre: usuario?.nombre || usuario?.email || '',
+        monto_recibido: montoRecibido,
+        vuelto
       });
       setOpenCobroMesaDialog(false);
       setComandaCobroMesa(null);
@@ -922,6 +924,7 @@ export default function Restaurante() {
           setComandaCobroMesa(null);
         }}
         onSubmit={cobrarEnMesa}
+        total={Number(comandaCobroMesa?.total || 0)}
       />
 
       <Dialog

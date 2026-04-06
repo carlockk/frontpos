@@ -31,7 +31,7 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
   const total = carrito.reduce((sum, p) => sum + p.precio * p.cantidad, 0);
   const cajaDisponible = cajaAbierta === true;
 
-  const handleVenta = async ({ tipoPago, tipoPedido }) => {
+  const handleVenta = async ({ tipoPago, tipoPedido, montoRecibido, vuelto }) => {
     if (!cajaDisponible) {
       alert('No puedes iniciar el POS si no abres la caja.');
       setModalOpen(false);
@@ -57,7 +57,9 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
         productos: productos_limpios,
         total,
         tipo_pago: tipoPago,
-        tipo_pedido: tipoPedido || '—'
+        tipo_pedido: tipoPedido || '—',
+        monto_recibido: montoRecibido,
+        vuelto
       });
 
       vaciarCarrito();
@@ -73,7 +75,9 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
             productos: productos_limpios,
             total,
             tipo_pago: tipoPago,
-            tipo_pedido: tipoPedido || '—'
+            tipo_pedido: tipoPedido || '—',
+            monto_recibido: montoRecibido,
+            vuelto
           }
         }
       });
@@ -287,6 +291,7 @@ export default function CarritoDrawer({ open, onClose, onVentaCompletada }) {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleVenta}
+        total={total}
       />
     </>
   );

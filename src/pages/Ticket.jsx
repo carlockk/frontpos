@@ -179,6 +179,12 @@ export default function Ticket() {
           <hr />
           <Typography variant="h6">Total: ${venta.total.toLocaleString()}</Typography>
           <Typography variant="body2">Pago: {venta.tipo_pago}</Typography>
+          {typeof venta.monto_recibido === 'number' && (
+            <Typography variant="body2">Recibido: ${venta.monto_recibido.toLocaleString()}</Typography>
+          )}
+          {typeof venta.vuelto === 'number' && venta.vuelto >= 0 && (
+            <Typography variant="body2">Vuelto: ${venta.vuelto.toLocaleString()}</Typography>
+          )}
           <Typography variant="body2">Pedido: {venta.tipo_pedido}</Typography>
           {(venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email) && (
             <Typography variant="body2">

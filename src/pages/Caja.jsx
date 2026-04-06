@@ -95,13 +95,15 @@ export default function Caja() {
     setModalCobroOpen(true);
   };
 
-  const handleCobrarComanda = async ({ tipoPago, tipoPedido }) => {
+  const handleCobrarComanda = async ({ tipoPago, tipoPedido, montoRecibido, vuelto }) => {
     if (!comandaSeleccionada?._id) return;
     try {
       const res = await cobrarComandaCaja(comandaSeleccionada._id, {
         tipo_pago: tipoPago,
         tipo_pedido: tipoPedido || `restaurante mesa ${comandaSeleccionada?.mesa?.numero || ''}`,
-        cobrador_nombre: usuario?.nombre || usuario?.email || ''
+        cobrador_nombre: usuario?.nombre || usuario?.email || '',
+        monto_recibido: montoRecibido,
+        vuelto
       });
       await cargarPendientes();
       navigate('/ticket', { state: { venta: res.data.venta } });
@@ -251,6 +253,7 @@ export default function Caja() {
           setComandaSeleccionada(null);
         }}
         onSubmit={handleCobrarComanda}
+        total={Number(comandaSeleccionada?.total || 0)}
       />
     </Box>
   );

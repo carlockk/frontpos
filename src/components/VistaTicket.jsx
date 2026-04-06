@@ -161,6 +161,12 @@ export default function VistaTicket({ venta }) {
         </Box>
 
         <Typography>Pago: {venta.tipo_pago || '—'}</Typography>
+        {typeof venta.monto_recibido === 'number' && (
+          <Typography>Recibido: ${venta.monto_recibido.toLocaleString()}</Typography>
+        )}
+        {typeof venta.vuelto === 'number' && venta.vuelto >= 0 && (
+          <Typography>Vuelto: ${venta.vuelto.toLocaleString()}</Typography>
+        )}
         <Typography>Pedido: {venta.tipo_pedido || '—'}</Typography>
         {(venta.cobrador_nombre || venta?.usuario?.nombre || venta?.usuario?.email) && (
           <Typography>
